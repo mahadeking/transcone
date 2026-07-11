@@ -12,21 +12,9 @@
 <meta property="og:url" content="https://transcone.netlify.app/" />
 <meta name="twitter:card" content="summary_large_image" />
 
-<!-- Format libraries (loaded lazily; conversion still happens 100% in your browser) -->
-<script defer src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
-<script>
-  // gifenc (module) — expose to window
-  window.__gifencReady = (async () => {
-    try {
-      const mod = await import('https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.esm.js');
-      window.gifenc = mod;
-    } catch (e) { console.warn('gifenc failed to load', e); }
-  })();
-</script>
+<!-- Format helper libraries load on demand — only when you actually use that
+     specific format. JPG/PNG/WebP/BMP/SVG/ICO need nothing extra, so most
+     visits download zero external JS. Conversion is always 100% in-browser. -->
 
 <style>
   :root {
@@ -751,6 +739,41 @@ const HINTS = {
   svg:   'Embeds your image inside an SVG wrapper (raster stays raster).'
 };
 
+/* ---------- Lazy library loading (fetch only when the format needs it) ---------- */
+const CDN = {
+  heic:  'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js',
+  utif:  'https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js',
+  jspdf: 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
+  jszip: 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+  pdfjs: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
+  gifenc:'https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.esm.js'
+};
+const _scriptCache = {};
+function loadScript(src) {
+  if (_scriptCache[src]) return _scriptCache[src];
+  _scriptCache[src] = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = () => { delete _scriptCache[src]; reject(new Error('Could not load a required library — check your connection')); };
+    document.head.appendChild(s);
+  });
+  return _scriptCache[src];
+}
+async function ensureHeic()  { if (!window.heic2any) await loadScript(CDN.heic);  return window.heic2any; }
+async function ensureUTIF()  { if (!window.UTIF)     await loadScript(CDN.utif);  return window.UTIF; }
+async function ensureJsPDF() { if (!window.jspdf)    await loadScript(CDN.jspdf); return window.jspdf; }
+async function ensureJSZip() { if (!window.JSZip)    await loadScript(CDN.jszip); return window.JSZip; }
+async function ensurePdfjs() { if (!window.pdfjsLib) await loadScript(CDN.pdfjs); return window.pdfjsLib; }
+let _gifencPromise;
+async function ensureGifenc() {
+  if (!window.gifenc) {
+    _gifencPromise = _gifencPromise || import(CDN.gifenc).then(m => (window.gifenc = m));
+    await _gifencPromise;
+  }
+  return window.gifenc;
+}
+
 /* ---------- Theme ---------- */
 const themeBtn = $('themeBtn');
 function applyTheme(t) {
@@ -842,13 +865,13 @@ async function decode(file) {
   const type = file.type;
 
   if (ext === 'heic' || ext === 'heif' || type === 'image/heic' || type === 'image/heif') {
-    if (!window.heic2any) throw new Error('HEIC library still loading — try again');
+    await ensureHeic();
     const out = await window.heic2any({ blob: file, toType: 'image/png' });
     const blob = Array.isArray(out) ? out[0] : out;
     return [await blobToCanvas(blob)];
   }
   if (ext === 'tif' || ext === 'tiff' || type === 'image/tiff') {
-    if (!window.UTIF) throw new Error('TIFF library still loading — try again');
+    await ensureUTIF();
     const buf = await file.arrayBuffer();
     const ifds = UTIF.decode(buf);
     UTIF.decodeImage(buf, ifds[0]);
@@ -856,7 +879,7 @@ async function decode(file) {
     return [rgbaToCanvas(new Uint8ClampedArray(rgba), ifds[0].width, ifds[0].height)];
   }
   if (ext === 'pdf' || type === 'application/pdf') {
-    if (!window.pdfjsLib) throw new Error('PDF library still loading — try again');
+    await ensurePdfjs();
     if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc)
       window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
     const buf = await file.arrayBuffer();
@@ -998,6 +1021,7 @@ function encodeBMP(canvas) {
 }
 
 async function encodeTIFF(canvas) {
+  await ensureUTIF();
   const { width: w, height: h } = canvas;
   const data = canvas.getContext('2d').getImageData(0, 0, w, h).data;
   const tiff = UTIF.encodeImage(data.buffer, w, h);
@@ -1005,6 +1029,7 @@ async function encodeTIFF(canvas) {
 }
 
 async function encodePDF(frames, quality) {
+  await ensureJsPDF();
   const { jsPDF } = window.jspdf;
   let pdf = null;
   for (const src of frames) {
@@ -1019,8 +1044,7 @@ async function encodePDF(frames, quality) {
 }
 
 async function encodeGIF(canvas) {
-  await window.__gifencReady;
-  if (!window.gifenc) throw new Error('GIF library still loading — try again');
+  await ensureGifenc();
   const { GIFEncoder, quantize, applyPalette } = window.gifenc;
   const { width: w, height: h } = canvas;
   const rgba = canvas.getContext('2d').getImageData(0, 0, w, h).data;
@@ -1137,8 +1161,8 @@ function pushResult(item, blob, filename) {
 
 /* ---------- Download all as ZIP ---------- */
 zipBtn.onclick = async () => {
-  if (!window.JSZip) { toast('Zip library still loading…'); return; }
   zipBtn.disabled = true; zipBtn.textContent = 'Zipping…';
+  await ensureJSZip();
   const zip = new JSZip();
   const used = {};
   items.flatMap(i => i.results).forEach(r => {
