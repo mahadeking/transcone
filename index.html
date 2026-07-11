@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Transcone — Free Private Image Converter</title>
 <meta name="description" content="Convert images between JPG, PNG, WebP, AVIF, PDF, HEIC, BMP, GIF, TIFF, SVG and ICO — 100% in your browser. No uploads, no limits, no ads." />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238b5cf6'/%3E%3Cstop offset='1' stop-color='%23d946ef'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='white' font-family='Arial'%3E%E2%87%84%3C/text%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23f97316'/%3E%3Cstop offset='1' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='white' font-family='Arial'%3E%E2%87%84%3C/text%3E%3C/svg%3E" />
 <meta property="og:title" content="Transcone — Free Private Image Converter" />
 <meta property="og:description" content="Convert JPG, PNG, WebP, AVIF, PDF, HEIC, BMP, GIF, TIFF, SVG & ICO — 100% in your browser. No uploads, no limits, no ads." />
 <meta property="og:type" content="website" />
@@ -32,8 +32,8 @@
   :root {
     --bg: #0a0a0f;
     --bg-2: #0d0d15;
-    --glow: radial-gradient(900px 480px at 12% -8%, rgba(139,92,246,.18) 0%, transparent 60%),
-            radial-gradient(820px 460px at 108% 4%, rgba(217,70,239,.15) 0%, transparent 58%);
+    --glow: radial-gradient(900px 480px at 12% -8%, rgba(249,115,22,.18) 0%, transparent 60%),
+            radial-gradient(820px 460px at 108% 4%, rgba(236,72,153,.15) 0%, transparent 58%);
     --surface: #13131c;
     --surface-2: #1a1a25;
     --surface-3: #20202d;
@@ -41,10 +41,10 @@
     --border-strong: #313142;
     --text: #f3f3f8;
     --muted: #8b8b9c;
-    --accent: #a78bfa;
-    --accent-2: #e879f9;
-    --accent-grad: linear-gradient(135deg, #8b5cf6, #d946ef);
-    --accent-soft: rgba(167,139,250,.13);
+    --accent: #fb923c;
+    --accent-2: #f472b6;
+    --accent-grad: linear-gradient(135deg, #f97316, #ec4899);
+    --accent-soft: rgba(249,115,22,.14);
     --success: #34d399;
     --success-soft: rgba(52,211,153,.13);
     --info: #38bdf8;
@@ -58,8 +58,8 @@
   html[data-theme="light"] {
     --bg: #fbfbfe;
     --bg-2: #f4f4fa;
-    --glow: radial-gradient(900px 480px at 12% -8%, rgba(139,92,246,.12) 0%, transparent 60%),
-            radial-gradient(820px 460px at 108% 4%, rgba(217,70,239,.10) 0%, transparent 58%);
+    --glow: radial-gradient(900px 480px at 12% -8%, rgba(249,115,22,.12) 0%, transparent 60%),
+            radial-gradient(820px 460px at 108% 4%, rgba(236,72,153,.10) 0%, transparent 58%);
     --surface: #ffffff;
     --surface-2: #f5f5fa;
     --surface-3: #eeeef5;
@@ -67,10 +67,10 @@
     --border-strong: #dcdce8;
     --text: #16161f;
     --muted: #6a6a7b;
-    --accent: #7c3aed;
-    --accent-2: #c026d3;
-    --accent-grad: linear-gradient(135deg, #7c3aed, #c026d3);
-    --accent-soft: rgba(124,58,237,.09);
+    --accent: #ea580c;
+    --accent-2: #db2777;
+    --accent-grad: linear-gradient(135deg, #ea580c, #db2777);
+    --accent-soft: rgba(234,88,12,.10);
     --success: #059669;
     --success-soft: rgba(5,150,105,.10);
     --info: #0284c7;
@@ -115,7 +115,7 @@
   .logo {
     width: 36px; height: 36px; border-radius: 10px; background: var(--accent-grad);
     display: flex; align-items: center; justify-content: center; color: #fff; font-size: 19px;
-    box-shadow: 0 6px 18px rgba(139,92,246,.45); flex-shrink: 0;
+    box-shadow: 0 6px 18px rgba(249,115,22,.45); flex-shrink: 0;
   }
   .brand .word { font-size: 1.15rem; font-weight: 800; letter-spacing: -.02em; }
   .nav-links { display: flex; gap: 4px; }
@@ -224,7 +224,7 @@
   }
   input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
-    background: var(--accent-grad); box-shadow: 0 2px 8px rgba(139,92,246,.5);
+    background: var(--accent-grad); box-shadow: 0 2px 8px rgba(249,115,22,.5);
     cursor: pointer; border: 2px solid var(--surface);
   }
   input[type="range"]::-moz-range-thumb {
@@ -257,8 +257,8 @@
     font-family: inherit; font-size: .88rem; font-weight: 700; border: none; border-radius: 12px;
     padding: 12px 20px; cursor: pointer; transition: .18s; display: inline-flex; align-items: center; gap: 7px;
   }
-  .btn-primary { background: var(--accent-grad); color: #fff; box-shadow: 0 8px 22px rgba(139,92,246,.4); }
-  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(139,92,246,.5); }
+  .btn-primary { background: var(--accent-grad); color: #fff; box-shadow: 0 8px 22px rgba(249,115,22,.4); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(249,115,22,.5); }
   .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
   .btn-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
   .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
@@ -333,18 +333,6 @@
   .feat h4 { font-size: 1rem; font-weight: 800; }
   .feat p { font-size: .86rem; color: var(--muted); margin-top: 6px; }
 
-  /* ---------- Compare ---------- */
-  .compare { max-width: 720px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); }
-  .compare table { width: 100%; border-collapse: collapse; font-size: .88rem; }
-  .compare th, .compare td { padding: 14px 18px; text-align: left; border-bottom: 1px solid var(--border); }
-  .compare thead th { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
-  .compare thead th:last-child { color: var(--accent); }
-  .compare tr:last-child td { border-bottom: none; }
-  .compare td:first-child { color: var(--muted); font-weight: 600; }
-  .compare td.us { font-weight: 800; }
-  .compare .yes { color: var(--success); font-weight: 800; }
-  .compare .no { color: var(--danger); font-weight: 700; }
-
   /* ---------- FAQ ---------- */
   .faq { max-width: 720px; margin: 0 auto; display: grid; gap: 12px; }
   .faq details {
@@ -366,7 +354,7 @@
   .step .num {
     width: 42px; height: 42px; border-radius: 12px; background: var(--accent-grad); color: #fff;
     font-weight: 800; font-size: 1.05rem; display: flex; align-items: center; justify-content: center;
-    margin-bottom: 15px; box-shadow: 0 8px 18px rgba(139,92,246,.4);
+    margin-bottom: 15px; box-shadow: 0 8px 18px rgba(249,115,22,.4);
   }
   .step h4 { font-size: 1.02rem; font-weight: 800; }
   .step p { color: var(--muted); font-size: .88rem; margin-top: 6px; }
@@ -652,26 +640,6 @@
           <li>Reduce file size before sending</li>
         </ul>
       </div>
-    </div>
-  </section>
-
-  <!-- Compare -->
-  <section>
-    <div class="sec-head">
-      <h2>Transcone vs the rest</h2>
-      <p>The usual online converters upload your files. We don't.</p>
-    </div>
-    <div class="compare">
-      <table>
-        <thead><tr><th>&nbsp;</th><th>Typical converter</th><th>Transcone</th></tr></thead>
-        <tbody>
-          <tr><td>Where files go</td><td class="no">Uploaded to a server</td><td class="us"><span class="yes">Stays on your device</span></td></tr>
-          <tr><td>Batch limit</td><td>3 free / 25 paid</td><td class="us"><span class="yes">Unlimited</span></td></tr>
-          <tr><td>File size cap</td><td>15&nbsp;MB free</td><td class="us"><span class="yes">None</span></td></tr>
-          <tr><td>Ads &amp; sign-up</td><td class="no">Yes</td><td class="us"><span class="yes">Never</span></td></tr>
-          <tr><td>Formats</td><td>~9</td><td class="us"><span class="yes">11</span></td></tr>
-        </tbody>
-      </table>
     </div>
   </section>
 
