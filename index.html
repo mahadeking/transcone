@@ -234,15 +234,6 @@
   .check { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: .83rem; color: var(--muted); cursor: pointer; user-select: none; }
   .check input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
 
-  /* Resolution radios */
-  .radio-row { display: flex; flex-wrap: wrap; gap: 10px 20px; }
-  .radio { display: inline-flex; align-items: center; gap: 8px; font-size: .86rem; font-weight: 600; color: var(--muted); cursor: pointer; user-select: none; }
-  .radio input { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; }
-  .radio input:checked ~ span { color: var(--text); }
-  .resize-controls { margin-top: 14px; }
-  .resize-controls.hidden { display: none; }
-  .resize-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
-
   /* ---------- Toolbar ---------- */
   .toolbar {
     margin: 16px auto 0; max-width: 860px; display: flex; align-items: center; justify-content: space-between;
@@ -500,23 +491,20 @@
       </div>
 
       <div class="field" style="grid-column: 1 / -1;">
-        <label>Image resolution</label>
-        <div class="radio-row">
-          <label class="radio"><input type="radio" name="resizeMode" value="none" checked /><span>No change</span></label>
-          <label class="radio"><input type="radio" name="resizeMode" value="px" /><span>Change by pixels</span></label>
-          <label class="radio"><input type="radio" name="resizeMode" value="pct" /><span>Change by %</span></label>
-        </div>
-        <div class="resize-controls hidden" id="pxControls">
-          <div class="resize-grid2">
-            <input type="number" id="rWidth" placeholder="Width (px)" min="1" />
-            <input type="number" id="rHeight" placeholder="Height (px)" min="1" />
+        <label>Resize <span style="font-weight:500;color:var(--muted)">(optional)</span></label>
+        <div class="resize-grid">
+          <div><input type="number" id="rWidth" placeholder="Width" min="1" /></div>
+          <div><input type="number" id="rHeight" placeholder="Height" min="1" /></div>
+          <div class="unit-toggle" id="unitToggle">
+            <button data-unit="px" class="active">px</button>
+            <button data-unit="pct">%</button>
           </div>
-          <label class="check"><input type="checkbox" id="keepAspect" checked /> Keep aspect ratio</label>
         </div>
-        <div class="resize-controls hidden" id="pctControls">
-          <input type="number" id="rPercent" placeholder="Scale (%)" min="1" value="100" />
-          <div class="hint">Scales width &amp; height together, keeping proportions.</div>
-        </div>
+        <label class="check">
+          <input type="checkbox" id="keepAspect" checked />
+          Keep aspect ratio
+        </label>
+        <div class="hint">Leave blank to keep original dimensions.</div>
       </div>
     </div>
   </div>
@@ -724,9 +712,7 @@ const qualityHint = $('qualityHint');
 const rWidth = $('rWidth');
 const rHeight = $('rHeight');
 const keepAspect = $('keepAspect');
-const rPercent = $('rPercent');
-const pxControls = $('pxControls');
-const pctControls = $('pctControls');
+const unitToggle = $('unitToggle');
 const convertBtn = $('convertBtn');
 const zipBtn = $('zipBtn');
 const clearBtn = $('clearBtn');
@@ -734,6 +720,7 @@ const addMoreBtn = $('addMoreBtn');
 
 let items = [];
 let idSeq = 0;
+let unit = 'px';
 
 /* ---------- Format metadata ---------- */
 const LOSSLESS = new Set(['png', 'bmp', 'tiff', 'svg', 'ico', 'gif']);
@@ -823,16 +810,14 @@ updateFormatUI();
 
 qualityInput.oninput = () => { qval.textContent = qualityInput.value; };
 
-function currentResizeMode() {
-  const el = document.querySelector('input[name="resizeMode"]:checked');
-  return el ? el.value : 'none';
-}
-document.querySelectorAll('input[name="resizeMode"]').forEach(r => {
-  r.addEventListener('change', () => {
-    const m = currentResizeMode();
-    pxControls.classList.toggle('hidden', m !== 'px');
-    pctControls.classList.toggle('hidden', m !== 'pct');
-  });
+unitToggle.querySelectorAll('button').forEach(b => {
+  b.onclick = () => {
+    unitToggle.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    unit = b.dataset.unit;
+    rWidth.placeholder = unit === 'px' ? 'Width' : 'Width %';
+    rHeight.placeholder = unit === 'px' ? 'Height' : 'Height %';
+  };
 });
 
 /* ---------- Drag & drop ---------- */
@@ -965,21 +950,16 @@ async function loadThumb(item) {
 
 /* ---------- Resize logic ---------- */
 function targetSize(w, h) {
-  const mode = currentResizeMode();
-  if (mode === 'none') return [w, h];
-
-  if (mode === 'pct') {
-    const p = parseFloat(rPercent.value);
-    if (isNaN(p) || p <= 0) return [w, h];
-    return [Math.max(1, Math.round(w * p / 100)), Math.max(1, Math.round(h * p / 100))];
-  }
-
-  // mode === 'px'
   let tw = parseFloat(rWidth.value), th = parseFloat(rHeight.value);
   const hasW = !isNaN(tw) && tw > 0, hasH = !isNaN(th) && th > 0;
   if (!hasW && !hasH) return [w, h];
-  tw = hasW ? tw : null;
-  th = hasH ? th : null;
+  if (unit === 'pct') {
+    tw = hasW ? w * tw / 100 : null;
+    th = hasH ? h * th / 100 : null;
+  } else {
+    tw = hasW ? tw : null;
+    th = hasH ? th : null;
+  }
   if (keepAspect.checked) {
     if (tw && !th) th = tw * h / w;
     else if (th && !tw) tw = th * w / h;
