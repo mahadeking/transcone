@@ -762,6 +762,7 @@ const CDN = {
   jspdf: 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
   jszip: 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
   pdfjs: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
+  pdfworker: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
   gifenc:'https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.esm.js'
 };
 const _scriptCache = {};
@@ -781,6 +782,21 @@ async function ensureUTIF()  { if (!window.UTIF)     await loadScript(CDN.utif);
 async function ensureJsPDF() { if (!window.jspdf)    await loadScript(CDN.jspdf); return window.jspdf; }
 async function ensureJSZip() { if (!window.JSZip)    await loadScript(CDN.jszip); return window.JSZip; }
 async function ensurePdfjs() { if (!window.pdfjsLib) await loadScript(CDN.pdfjs); return window.pdfjsLib; }
+let _pdfWorkerReady = false;
+async function ensurePdfWorker() {
+  if (_pdfWorkerReady) return;
+  const opts = window.pdfjsLib.GlobalWorkerOptions;
+  try {
+    // Load the worker as a same-origin blob — avoids cross-origin worker hangs.
+    const resp = await fetch(CDN.pdfworker);
+    if (!resp.ok) throw new Error('worker http ' + resp.status);
+    opts.workerSrc = URL.createObjectURL(await resp.blob());
+  } catch (e) {
+    // Fallback: point pdf.js straight at the CDN worker URL.
+    opts.workerSrc = CDN.pdfworker;
+  }
+  _pdfWorkerReady = true;
+}
 let _gifencPromise;
 async function ensureGifenc() {
   if (!window.gifenc) {
@@ -901,10 +917,12 @@ async function decode(file) {
   }
   if (ext === 'pdf' || type === 'application/pdf') {
     await ensurePdfjs();
-    if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc)
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    await ensurePdfWorker();
     const buf = await file.arrayBuffer();
-    const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+    const pdf = await Promise.race([
+      window.pdfjsLib.getDocument({ data: buf }).promise,
+      new Promise((_, rej) => setTimeout(() => rej(new Error('PDF took too long to open — please try again')), 45000))
+    ]);
     const frames = [];
     const maxPages = Math.min(pdf.numPages, 30);
     for (let p = 1; p <= maxPages; p++) {
