@@ -253,6 +253,13 @@
   .btn-success { background: var(--success); color: #04120c; }
   .btn-success:hover { transform: translateY(-1px); filter: brightness(1.06); }
 
+  /* Progress bar */
+  .progress-wrap { max-width: 860px; margin: 14px auto 0; display: flex; align-items: center; gap: 14px; }
+  .progress-wrap.hidden { display: none; }
+  .progress-track { flex: 1; height: 9px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+  .progress-fill { height: 100%; width: 0%; border-radius: 999px; background: var(--accent-grad); transition: width .25s ease; }
+  .progress-label { font-size: .82rem; font-weight: 700; color: var(--muted); white-space: nowrap; min-width: 108px; text-align: right; }
+
   /* ---------- File grid ---------- */
   #grid { margin: 16px auto 0; max-width: 860px; display: grid; gap: 12px; }
   @media (min-width: 640px) { #grid { grid-template-columns: 1fr 1fr; } }
@@ -520,6 +527,11 @@
     </div>
   </div>
 
+  <div class="progress-wrap hidden" id="progressWrap">
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <span class="progress-label" id="progressLabel">Converting…</span>
+  </div>
+
   <div id="grid" class="hidden"></div>
 
   <!-- How it works -->
@@ -717,6 +729,10 @@ const convertBtn = $('convertBtn');
 const zipBtn = $('zipBtn');
 const clearBtn = $('clearBtn');
 const addMoreBtn = $('addMoreBtn');
+const progressWrap = $('progressWrap');
+const progressFill = $('progressFill');
+const progressLabel = $('progressLabel');
+let converting = false;
 
 let items = [];
 let idSeq = 0;
@@ -857,6 +873,11 @@ function refreshStatus() {
   statusEl.textContent = n === 0 ? '0 files' : `${n} file${n>1?'s':''}${done? ' · '+done+' converted':''}`;
   convertBtn.disabled = n === 0;
   zipBtn.classList.toggle('hidden', items.flatMap(i=>i.results).length < 2);
+  updateConvertLabel();
+}
+function updateConvertLabel() {
+  if (converting) return; // don't clobber the "Converting…" spinner label
+  convertBtn.textContent = items.length === 1 ? 'Convert' : 'Convert all';
 }
 
 /* ---------- Decoders → array of canvases (frames) ---------- */
@@ -1119,10 +1140,18 @@ async function encodeFrame(src, fmt, quality) {
 convertBtn.onclick = async () => {
   const fmt = formatSel.value;
   const quality = parseInt(qualityInput.value, 10) / 100;
+  converting = true;
   convertBtn.disabled = true;
   convertBtn.innerHTML = '<span class="spinner"></span> Converting…';
 
+  const total = items.length;
+  let idx = 0;
+  progressWrap.classList.remove('hidden');
+  progressFill.style.width = '0%';
+
   for (const item of items) {
+    progressLabel.textContent = total > 1 ? `Converting ${idx + 1} of ${total}…` : 'Converting…';
+    progressFill.style.width = Math.round((idx / total) * 100) + '%';
     item.status = 'working'; item.error = null; updateCard(item);
     try {
       if (!item.srcFrames) item.srcFrames = await decode(item.file);
@@ -1145,14 +1174,20 @@ convertBtn.onclick = async () => {
       item.status = 'error'; item.error = e.message || 'Conversion failed';
     }
     updateCard(item);
+    idx++;
+    progressFill.style.width = Math.round((idx / total) * 100) + '%';
     await new Promise(r => setTimeout(r, 0));
   }
 
-  convertBtn.disabled = false;
-  convertBtn.textContent = 'Convert all';
-  refreshStatus();
   const ok = items.filter(i => i.status === 'done').length;
+  progressFill.style.width = '100%';
+  progressLabel.textContent = `✓ ${ok} of ${total} done`;
+  converting = false;
+  convertBtn.disabled = false;
+  updateConvertLabel();
+  refreshStatus();
   if (ok) toast(`✅ Converted ${ok} file${ok>1?'s':''}`);
+  setTimeout(() => { if (!converting) progressWrap.classList.add('hidden'); }, 1400);
 };
 
 function pushResult(item, blob, filename) {
@@ -1184,6 +1219,7 @@ clearBtn.onclick = () => {
   items.forEach(i => i.results.forEach(r => URL.revokeObjectURL(r.url)));
   items = []; grid.innerHTML = '';
   panel.classList.add('hidden'); toolbar.classList.add('hidden'); grid.classList.add('hidden');
+  progressWrap.classList.add('hidden');
   refreshStatus();
 };
 
