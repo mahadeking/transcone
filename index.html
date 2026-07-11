@@ -404,6 +404,35 @@
   footer .fbrand .logo { width: 26px; height: 26px; border-radius: 7px; font-size: 14px; }
   footer .dot { margin: 0 7px; opacity: .5; }
 
+  /* ---------- Embed mode (?embed=1) ---------- */
+  .embed-head { display: none; align-items: center; gap: 14px; text-align: left; }
+  .embed-head .eh-icon {
+    width: 46px; height: 46px; border-radius: 12px; background: var(--accent-grad); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+    box-shadow: 0 6px 16px rgba(249,115,22,.4);
+  }
+  .embed-head .eh-title { font-size: 1.25rem; font-weight: 800; letter-spacing: -.02em; }
+  .embed-head .eh-desc { font-size: .84rem; color: var(--muted); margin-top: 2px; }
+  body.embed .nav,
+  body.embed .hero .eyebrow,
+  body.embed .hero h1,
+  body.embed .hero .lead,
+  body.embed .trust,
+  body.embed #how,
+  body.embed #formats,
+  body.embed #features,
+  body.embed #usecases,
+  body.embed #tools,
+  body.embed #faq,
+  body.embed footer { display: none !important; }
+  body.embed .hero { padding: 18px 0 0; text-align: left; }
+  body.embed .embed-head { display: flex; }
+  body.embed .dropzone { margin: 16px 0 0; max-width: none; }
+  body.embed .panel, body.embed .toolbar, body.embed .progress-wrap, body.embed #grid { max-width: none; }
+  body.embed .wrap { padding-bottom: 24px; }
+  .embed-note { display: none; }
+  body.embed .embed-note { display: block; text-align: center; font-size: .76rem; color: var(--muted); margin-top: 18px; }
+
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
     background: var(--text); color: var(--bg); padding: 13px 22px; border-radius: 13px;
@@ -436,6 +465,13 @@
 
 <div class="wrap" id="top">
   <section class="hero" id="convert">
+    <div class="embed-head">
+      <div class="eh-icon">⇄</div>
+      <div class="eh-text">
+        <div class="eh-title">Image Converter</div>
+        <div class="eh-desc">JPG, PNG, WebP, AVIF, PDF, HEIC, GIF, TIFF &amp; more — converted right in your browser.</div>
+      </div>
+    </div>
     <span class="eyebrow">🔒 100% Private · Runs in your browser</span>
     <h1>Convert any image,<br><span class="grad">instantly &amp; privately</span></h1>
     <p class="lead">JPG, PNG, WebP, AVIF, PDF, HEIC, BMP, GIF, TIFF, SVG &amp; ICO — converted right on your device. Nothing is ever uploaded.</p>
@@ -458,6 +494,7 @@
       <span class="tbadge blue">🌐 11 Formats</span>
       <span class="tbadge violet">⚡ Instant · No upload</span>
     </div>
+    <div class="embed-note">🔒 Your files never leave this device — everything runs locally in your browser.</div>
   </section>
 
   <!-- Settings -->
@@ -810,7 +847,17 @@ function applyTheme(t) {
   themeBtn.textContent = t === 'dark' ? '☀️' : '🌙';
   try { localStorage.setItem('tc-theme', t); } catch (e) {}
 }
-applyTheme((() => { try { return localStorage.getItem('tc-theme') || 'dark'; } catch(e){ return 'dark'; } })());
+// Embed mode: ?embed=1 hides the marketing page and shows just the tool.
+// Optional ?theme=light|dark overrides the theme (without persisting).
+const _params = new URLSearchParams(location.search);
+if (_params.has('embed')) document.body.classList.add('embed');
+const _themeParam = _params.get('theme');
+if (_themeParam === 'light' || _themeParam === 'dark') {
+  document.documentElement.setAttribute('data-theme', _themeParam);
+  themeBtn.textContent = _themeParam === 'dark' ? '☀️' : '🌙';
+} else {
+  applyTheme((() => { try { return localStorage.getItem('tc-theme') || 'dark'; } catch(e){ return 'dark'; } })());
+}
 themeBtn.onclick = () => applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
 
 /* ---------- Toast ---------- */
