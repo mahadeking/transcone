@@ -575,6 +575,25 @@
           <input type="color" id="bgColor" value="#ffffff" title="Custom background colour" />
         </div>
       </div>
+
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>Colour filter</label>
+        <div class="seg" id="filterSeg">
+          <button data-fx="none" class="active">None</button>
+          <button data-fx="grayscale">Grayscale</button>
+          <button data-fx="sepia">Sepia</button>
+          <button data-fx="invert">Invert</button>
+          <button data-fx="bw">B&amp;W</button>
+        </div>
+      </div>
+
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>Flip</label>
+        <div class="seg" id="flipSeg">
+          <button data-flip="h">↔ Horizontal</button>
+          <button data-flip="v">↕ Vertical</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -948,6 +967,42 @@ bgColor.oninput = () => {
 };
 function currentBg() { return bgMode === 'custom' ? bgColor.value : bgMode; }
 
+/* ---------- Colour filter & flip ---------- */
+let filterMode = 'none'; // none | grayscale | sepia | invert | bw
+let flipH = false, flipV = false;
+const filterSeg = $('filterSeg');
+const flipSeg = $('flipSeg');
+filterSeg.querySelectorAll('button').forEach(b => b.onclick = () => {
+  filterSeg.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  filterMode = b.dataset.fx;
+});
+flipSeg.querySelectorAll('button').forEach(b => b.onclick = () => {
+  b.classList.toggle('active');
+  const on = b.classList.contains('active');
+  if (b.dataset.flip === 'h') flipH = on; else flipV = on;
+});
+function applyFilter(ctx, w, h) {
+  if (filterMode === 'none') return;
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    if (filterMode === 'grayscale' || filterMode === 'bw') {
+      let v = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+      if (filterMode === 'bw') v = v < 128 ? 0 : 255;
+      d[i] = d[i + 1] = d[i + 2] = v;
+    } else if (filterMode === 'sepia') {
+      d[i]     = Math.min(255, 0.393 * r + 0.769 * g + 0.189 * b);
+      d[i + 1] = Math.min(255, 0.349 * r + 0.686 * g + 0.168 * b);
+      d[i + 2] = Math.min(255, 0.272 * r + 0.534 * g + 0.131 * b);
+    } else if (filterMode === 'invert') {
+      d[i] = 255 - r; d[i + 1] = 255 - g; d[i + 2] = 255 - b;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
 /* ---------- Drag & drop ---------- */
 dropzone.onclick = () => fileInput.click();
 addMoreBtn.onclick = () => fileInput.click();
@@ -1122,13 +1177,28 @@ function prepareCanvas(src, fmt) {
   const [tw, th] = targetSize(base.width, base.height);
   const needResize = tw !== base.width || th !== base.height;
   const needBg = OPAQUE_OUT.has(fmt);
-  if (!needResize && !needBg) return base;
+  const needFx = flipH || flipV || filterMode !== 'none';
+  if (!needResize && !needBg && !needFx) return base;
+
   const c = document.createElement('canvas');
   c.width = tw; c.height = th;
   const ctx = c.getContext('2d');
-  if (needBg) { ctx.fillStyle = currentBg(); ctx.fillRect(0, 0, tw, th); }
   ctx.imageSmoothingQuality = 'high';
+  // draw the (possibly flipped) image
+  ctx.save();
+  ctx.translate(flipH ? tw : 0, flipV ? th : 0);
+  ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
   ctx.drawImage(base, 0, 0, tw, th);
+  ctx.restore();
+  // colour filter applies to the image only
+  applyFilter(ctx, tw, th);
+  // for opaque outputs, paint the background *behind* the image
+  if (needBg) {
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.fillStyle = currentBg();
+    ctx.fillRect(0, 0, tw, th);
+    ctx.globalCompositeOperation = 'source-over';
+  }
   return c;
 }
 
