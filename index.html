@@ -237,6 +237,14 @@
   .seg button { border: none; background: transparent; color: var(--muted); font-weight: 700; font-size: .78rem; padding: 8px 13px; border-radius: 8px; cursor: pointer; transition: .15s; }
   .seg button.active { background: var(--accent-grad); color: #fff; }
   .seg input[type="color"] { width: 34px; height: 30px; padding: 2px; margin-left: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); cursor: pointer; }
+
+  /* Adjustments & crop */
+  .adjust { display: grid; gap: 12px; }
+  .adj-row { display: flex; align-items: center; gap: 12px; }
+  .adj-label { font-size: .8rem; font-weight: 600; color: var(--muted); min-width: 84px; }
+  .crop-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .crop-grid .cg { display: flex; flex-direction: column; gap: 5px; }
+  .crop-grid .cg span { font-size: .72rem; color: var(--muted); font-weight: 700; }
   .check { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: .83rem; color: var(--muted); cursor: pointer; user-select: none; }
   .check input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
 
@@ -594,6 +602,30 @@
           <button data-flip="v">↕ Vertical</button>
         </div>
       </div>
+
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>Adjustments</label>
+        <div class="adjust">
+          <div class="adj-row"><span class="adj-label">Brightness</span><input type="range" id="brightness" min="-100" max="100" value="0" /><span class="qval" id="brightnessVal">0</span></div>
+          <div class="adj-row"><span class="adj-label">Contrast</span><input type="range" id="contrast" min="-100" max="100" value="0" /><span class="qval" id="contrastVal">0</span></div>
+          <div class="adj-row"><span class="adj-label">Saturation</span><input type="range" id="saturation" min="0" max="200" value="100" /><span class="qval" id="saturationVal">100</span></div>
+        </div>
+      </div>
+
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>Crop <span style="font-weight:500;color:var(--muted)">— pixels to trim from each edge</span></label>
+        <div class="crop-grid">
+          <div class="cg"><span>Top</span><input type="number" id="cropTop" min="0" placeholder="0" /></div>
+          <div class="cg"><span>Bottom</span><input type="number" id="cropBottom" min="0" placeholder="0" /></div>
+          <div class="cg"><span>Left</span><input type="number" id="cropLeft" min="0" placeholder="0" /></div>
+          <div class="cg"><span>Right</span><input type="number" id="cropRight" min="0" placeholder="0" /></div>
+        </div>
+      </div>
+
+      <div class="field" id="dpiField" style="grid-column: 1 / -1;">
+        <label>DPI <span style="font-weight:500;color:var(--muted)">— print resolution (JPG / PNG)</span></label>
+        <input type="number" id="dpi" min="1" value="72" style="max-width:160px;" />
+      </div>
     </div>
   </div>
 
@@ -815,6 +847,7 @@ const rotateSeg = $('rotateSeg');
 const bgSeg = $('bgSeg');
 const bgColor = $('bgColor');
 const bgField = $('bgField');
+const dpiField = $('dpiField');
 let converting = false;
 
 let items = [];
@@ -931,6 +964,7 @@ function updateFormatUI() {
   formatHint.textContent = HINTS[f] || '';
   qualityField.style.display = LOSSLESS.has(f) || f === 'pdf' ? 'none' : 'block';
   bgField.style.display = OPAQUE_OUT.has(f) ? 'block' : 'none';
+  dpiField.style.display = (f === 'jpeg' || f === 'png') ? 'block' : 'none';
 }
 formatSel.onchange = updateFormatUI;
 updateFormatUI();
@@ -982,25 +1016,82 @@ flipSeg.querySelectorAll('button').forEach(b => b.onclick = () => {
   const on = b.classList.contains('active');
   if (b.dataset.flip === 'h') flipH = on; else flipV = on;
 });
+/* ---------- Adjustments, crop, DPI ---------- */
+let brightness = 0, contrast = 0, saturation = 100;
+[['brightness','brightnessVal'],['contrast','contrastVal'],['saturation','saturationVal']].forEach(([id, valId]) => {
+  const el = $(id), v = $(valId);
+  el.oninput = () => {
+    v.textContent = el.value;
+    if (id === 'brightness') brightness = +el.value;
+    else if (id === 'contrast') contrast = +el.value;
+    else saturation = +el.value;
+  };
+});
+const dpiInput = $('dpi');
+function currentDpi() { const n = parseInt(dpiInput.value, 10); return isNaN(n) || n <= 0 ? null : n; }
+function cropVal(id) { const n = parseInt($(id).value, 10); return isNaN(n) || n < 0 ? 0 : n; }
+
+// Brightness / contrast / saturation, then colour filter — one pixel pass.
 function applyFilter(ctx, w, h) {
-  if (filterMode === 'none') return;
+  const hasAdjust = brightness !== 0 || contrast !== 0 || saturation !== 100;
+  if (filterMode === 'none' && !hasAdjust) return;
+  const C = contrast * 2.55;
+  const cf = (259 * (C + 255)) / (255 * (259 - C));
+  const sat = saturation / 100;
+  const br = brightness * 2.55;
   const img = ctx.getImageData(0, 0, w, h);
   const d = img.data;
   for (let i = 0; i < d.length; i += 4) {
-    const r = d[i], g = d[i + 1], b = d[i + 2];
+    let r = d[i], g = d[i + 1], b = d[i + 2];
+    if (br) { r += br; g += br; b += br; }
+    if (contrast) { r = cf * (r - 128) + 128; g = cf * (g - 128) + 128; b = cf * (b - 128) + 128; }
+    if (saturation !== 100) { const gr = 0.299 * r + 0.587 * g + 0.114 * b; r = gr + sat * (r - gr); g = gr + sat * (g - gr); b = gr + sat * (b - gr); }
+    r = r < 0 ? 0 : r > 255 ? 255 : r; g = g < 0 ? 0 : g > 255 ? 255 : g; b = b < 0 ? 0 : b > 255 ? 255 : b;
     if (filterMode === 'grayscale' || filterMode === 'bw') {
-      let v = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+      let v = 0.299 * r + 0.587 * g + 0.114 * b;
       if (filterMode === 'bw') v = v < 128 ? 0 : 255;
-      d[i] = d[i + 1] = d[i + 2] = v;
+      r = g = b = v;
     } else if (filterMode === 'sepia') {
-      d[i]     = Math.min(255, 0.393 * r + 0.769 * g + 0.189 * b);
-      d[i + 1] = Math.min(255, 0.349 * r + 0.686 * g + 0.168 * b);
-      d[i + 2] = Math.min(255, 0.272 * r + 0.534 * g + 0.131 * b);
+      const nr = 0.393 * r + 0.769 * g + 0.189 * b, ng = 0.349 * r + 0.686 * g + 0.168 * b, nb = 0.272 * r + 0.534 * g + 0.131 * b;
+      r = nr > 255 ? 255 : nr; g = ng > 255 ? 255 : ng; b = nb > 255 ? 255 : nb;
     } else if (filterMode === 'invert') {
-      d[i] = 255 - r; d[i + 1] = 255 - g; d[i + 2] = 255 - b;
+      r = 255 - r; g = 255 - g; b = 255 - b;
     }
+    d[i] = r; d[i + 1] = g; d[i + 2] = b;
   }
   ctx.putImageData(img, 0, 0);
+}
+
+/* ---------- DPI byte-patching (JPEG JFIF + PNG pHYs) ---------- */
+const _crcTable = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(bytes, start, end) { let c = 0xFFFFFFFF; for (let i = start; i < end; i++) c = _crcTable[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function setJpegDpi(bytes, dpi) {
+  if (bytes[2] === 0xFF && bytes[3] === 0xE0) { // APP0 JFIF
+    bytes[13] = 1;                       // units = dots per inch
+    bytes[14] = dpi >> 8; bytes[15] = dpi & 0xFF;
+    bytes[16] = dpi >> 8; bytes[17] = dpi & 0xFF;
+  }
+  return bytes;
+}
+function setPngDpi(bytes, dpi) {
+  const ppm = Math.round(dpi / 0.0254);
+  const chunk = new Uint8Array(4 + 4 + 9 + 4);
+  const dv = new DataView(chunk.buffer);
+  dv.setUint32(0, 9);
+  chunk.set([0x70, 0x48, 0x59, 0x73], 4); // 'pHYs'
+  dv.setUint32(8, ppm); dv.setUint32(12, ppm); chunk[16] = 1; // unit = metre
+  dv.setUint32(17, crc32(chunk, 4, 17));
+  const out = new Uint8Array(bytes.length + chunk.length); // insert after IHDR (offset 33)
+  out.set(bytes.subarray(0, 33), 0);
+  out.set(chunk, 33);
+  out.set(bytes.subarray(33), 33 + chunk.length);
+  return out;
+}
+async function applyDpi(blob, fmt) {
+  const dpi = currentDpi();
+  if (!dpi || (fmt !== 'jpeg' && fmt !== 'png')) return blob;
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  return new Blob([fmt === 'jpeg' ? setJpegDpi(bytes, dpi) : setPngDpi(bytes, dpi)], { type: MIME[fmt] });
 }
 
 /* ---------- Drag & drop ---------- */
@@ -1174,10 +1265,20 @@ function prepareCanvas(src, fmt) {
     rctx.drawImage(src, -src.width / 2, -src.height / 2);
     base = rc;
   }
+  // crop pixels from each edge
+  const ct = cropVal('cropTop'), cb = cropVal('cropBottom'), cl = cropVal('cropLeft'), cr = cropVal('cropRight');
+  if (ct || cb || cl || cr) {
+    const cw = Math.max(1, base.width - cl - cr);
+    const chh = Math.max(1, base.height - ct - cb);
+    const cc = document.createElement('canvas');
+    cc.width = cw; cc.height = chh;
+    cc.getContext('2d').drawImage(base, cl, ct, cw, chh, 0, 0, cw, chh);
+    base = cc;
+  }
   const [tw, th] = targetSize(base.width, base.height);
   const needResize = tw !== base.width || th !== base.height;
   const needBg = OPAQUE_OUT.has(fmt);
-  const needFx = flipH || flipV || filterMode !== 'none';
+  const needFx = flipH || flipV || filterMode !== 'none' || brightness !== 0 || contrast !== 0 || saturation !== 100;
   if (!needResize && !needBg && !needFx) return base;
 
   const c = document.createElement('canvas');
@@ -1325,7 +1426,7 @@ async function encodeFrame(src, fmt, quality) {
       const blob = await canvasToBlob(canvas, MIME[fmt], LOSSLESS.has(fmt) ? undefined : quality);
       if (!blob || blob.type !== MIME[fmt])
         throw new Error(fmt.toUpperCase() + ' encoding isn’t supported by this browser');
-      return blob;
+      return applyDpi(blob, fmt);
     }
     case 'bmp':  return encodeBMP(canvas);
     case 'tiff': return encodeTIFF(canvas);
