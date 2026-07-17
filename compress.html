@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Compress &amp; Resize Images — Transcone</title>
-<meta name="description" content="Compress and resize images (JPG, PNG, WebP, HEIC) right in your browser. Shrink file size with quality or a target size — nothing uploaded." />
+<title>Image Optimizer — Compress &amp; Resize | Transcone</title>
+<meta name="description" content="Optimize images (JPG, PNG, WebP, HEIC) right in your browser — shrink file size with smart optimization, quality, target size or resize. Nothing uploaded." />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23f97316'/%3E%3Cstop offset='1' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='white' font-family='Arial'%3E%E2%87%84%3C/text%3E%3C/svg%3E" />
-<meta property="og:title" content="Compress &amp; Resize Images — Transcone" />
-<meta property="og:description" content="Shrink and resize images right in your browser — nothing uploaded." />
+<meta property="og:title" content="Image Optimizer — Transcone" />
+<meta property="og:description" content="Optimize, compress and resize images right in your browser — nothing uploaded." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://transcone.vercel.app/compress.html" />
 
@@ -187,7 +187,7 @@
     </a>
     <div class="nav-links">
       <a href="/">Converter</a>
-      <a href="/compress.html" class="active">Compress &amp; Resize</a>
+      <a href="/compress.html" class="active">Optimize</a>
     </div>
     <div class="nav-right">
       <button class="theme-btn" id="themeBtn" title="Toggle theme">🌙</button>
@@ -198,15 +198,15 @@
 <div class="wrap" id="top">
   <section class="hero">
     <div class="embed-head">
-      <div class="eh-icon">🗜️</div>
+      <div class="eh-icon">✨</div>
       <div class="eh-text">
-        <div class="eh-title">Compress &amp; Resize</div>
+        <div class="eh-title">Image Optimizer</div>
         <div class="eh-desc">Shrink image file size and dimensions — right in your browser.</div>
       </div>
     </div>
     <span class="eyebrow">🔒 100% Private · Runs in your browser</span>
-    <h1>Compress &amp; resize images, <span class="grad">right in your browser</span></h1>
-    <p class="lead">Drop JPG, PNG, WebP or HEIC images and shrink them by quality, target size, or new dimensions.</p>
+    <h1>Optimize your images, <span class="grad">right in your browser</span></h1>
+    <p class="lead">Drop JPG, PNG, WebP or HEIC images and shrink their file size — smart optimize in one click, or fine-tune quality, target size and dimensions.</p>
 
     <div class="dropzone" id="dropzone">
       <div class="di">
@@ -215,7 +215,7 @@
           <path d="M20 16.5A3.5 3.5 0 0018.5 10h-1.26A6 6 0 104 15.25"/>
         </svg>
       </div>
-      <h3>Drop images to compress</h3>
+      <h3>Drop images to optimize</h3>
       <p>or <span class="browse">browse files</span> — add as many as you like</p>
       <div class="dz-sub">JPG · PNG · WebP · HEIC · BMP · GIF</div>
       <input type="file" id="fileInput" accept="image/*,.heic,.heif" multiple hidden />
@@ -230,17 +230,18 @@
   </section>
 
   <div class="panel hidden" id="panel">
-    <div class="panel-head"><span class="dotmark"></span> Compression settings</div>
+    <div class="panel-head"><span class="dotmark"></span> Optimization settings</div>
     <div class="panel-body">
       <div class="field">
-        <label for="formatSel">Output format</label>
+        <label for="formatSel">Mode</label>
         <select id="formatSel">
-          <option value="original" selected>Keep original format</option>
+          <option value="smart" selected>Smart optimize (recommended)</option>
+          <option value="original">Keep original format</option>
           <option value="webp">WebP — best compression</option>
           <option value="jpeg">JPG / JPEG</option>
           <option value="png">PNG</option>
         </select>
-        <div class="hint" id="formatHint">Keeps each image in its own format (JPG→JPG, PNG→PNG…).</div>
+        <div class="hint" id="formatHint">Automatically balances quality and file size — no settings needed.</div>
       </div>
 
       <div class="field" id="qualityField">
@@ -279,7 +280,7 @@
     <div class="actions">
       <button class="btn btn-ghost" id="clearBtn">Clear all</button>
       <button class="btn btn-ghost" id="addMoreBtn">＋ Add more</button>
-      <button class="btn btn-primary" id="convertBtn">Compress all</button>
+      <button class="btn btn-primary" id="convertBtn">Optimize all</button>
       <button class="btn btn-success hidden" id="zipBtn">⬇ Download all (.zip)</button>
     </div>
   </div>
@@ -340,12 +341,13 @@ function extOf(n){ return (n.split('.').pop()||'').toLowerCase(); }
 
 function updateFormatUI(){
   const f = formatSel.value;
-  formatHint.textContent = f==='original' ? 'Keeps each image in its own format (JPG→JPG, PNG→PNG…).'
+  formatHint.textContent = f==='smart' ? 'Automatically balances quality and file size — no settings needed.'
+    : f==='original' ? 'Keeps each image in its own format (JPG→JPG, PNG→PNG…).'
     : f==='webp' ? 'WebP gives the smallest files at great quality — best for the web.'
     : f==='jpeg' ? 'Universal format for photos. No transparency.'
     : 'Lossless. Quality slider and target size don’t apply to PNG.';
-  const lossy = f==='jpeg' || f==='webp' || f==='original';
-  qualityField.style.display = f==='png' ? 'none' : 'block';
+  // Smart mode is automatic — hide manual quality & target.
+  qualityField.style.display = (f==='png' || f==='smart') ? 'none' : 'block';
   targetField.style.display = (f==='jpeg' || f==='webp') ? 'block' : 'none';
 }
 formatSel.onchange = updateFormatUI; updateFormatUI();
@@ -370,10 +372,10 @@ async function addFiles(list){
 }
 function refreshStatus(){
   const n=items.length, done=items.filter(i=>i.status==='done').length;
-  statusEl.textContent = n===0 ? '0 files' : `${n} file${n>1?'s':''}${done?' · '+done+' compressed':''}`;
+  statusEl.textContent = n===0 ? '0 files' : `${n} file${n>1?'s':''}${done?' · '+done+' optimized':''}`;
   convertBtn.disabled = n===0;
   zipBtn.classList.toggle('hidden', items.filter(i=>i.result).length < 2);
-  if(!converting) convertBtn.textContent = items.length===1 ? 'Compress' : 'Compress all';
+  if(!converting) convertBtn.textContent = items.length===1 ? 'Optimize' : 'Optimize all';
 }
 
 async function decode(file){
@@ -410,19 +412,20 @@ function canvasToBlob(canvas,mime,q){ return new Promise((res,rej)=>canvas.toBlo
 
 function resolveFmt(item){
   const f=formatSel.value;
-  if(f!=='original') return f;
+  if(f!=='original' && f!=='smart') return f;
   const t=item.file.type;
   if(t==='image/png') return 'png';
   if(t==='image/webp') return 'webp';
-  return 'jpeg'; // jpg, heic, bmp, gif → jpeg
+  return 'jpeg'; // smart/original for jpg, heic, bmp, gif → jpeg
 }
 async function compressOne(item){
   const canvas = sizedCanvas(item.srcCanvas);
+  const smart = formatSel.value === 'smart';
   const fmt = resolveFmt(item);
   const mime = MIME[fmt];
   if(fmt==='png'){ const blob=await canvasToBlob(canvas,mime); return {blob,fmt}; }
-  const q = parseInt(qualityInput.value,10)/100;
-  const targetKB = parseFloat(targetSize.value);
+  const q = smart ? 0.8 : parseInt(qualityInput.value,10)/100;
+  const targetKB = smart ? NaN : parseFloat(targetSize.value);
   if((fmt==='jpeg'||fmt==='webp') && !isNaN(targetKB) && targetKB>0){
     const targetBytes = targetKB*1024;
     let lo=0.05, hi=0.95, best=await canvasToBlob(canvas,mime,hi);
@@ -437,11 +440,11 @@ async function compressOne(item){
 }
 
 convertBtn.onclick = async () => {
-  converting=true; convertBtn.disabled=true; convertBtn.innerHTML='<span class="spinner"></span> Compressing…';
+  converting=true; convertBtn.disabled=true; convertBtn.innerHTML='<span class="spinner"></span> Optimizing…';
   const total=items.length; let idx=0;
   progressWrap.classList.remove('hidden'); progressFill.style.width='0%';
   for(const item of items){
-    progressLabel.textContent = total>1 ? `Compressing ${idx+1} of ${total}…` : 'Compressing…';
+    progressLabel.textContent = total>1 ? `Optimizing ${idx+1} of ${total}…` : 'Optimizing…';
     progressFill.style.width = Math.round((idx/total)*100)+'%';
     item.status='working'; item.error=null; updateCard(item);
     try{
@@ -457,7 +460,7 @@ convertBtn.onclick = async () => {
   const ok=items.filter(i=>i.status==='done').length;
   progressFill.style.width='100%'; progressLabel.textContent=`✓ ${ok} of ${total} done`;
   converting=false; convertBtn.disabled=false; refreshStatus();
-  if(ok) toast(`✅ Compressed ${ok} file${ok>1?'s':''}`);
+  if(ok) toast(`✅ Optimized ${ok} file${ok>1?'s':''}`);
   setTimeout(()=>{ if(!converting) progressWrap.classList.add('hidden'); },1400);
 };
 
