@@ -341,7 +341,7 @@ function extOf(n){ return (n.split('.').pop()||'').toLowerCase(); }
 
 function updateFormatUI(){
   const f = formatSel.value;
-  formatHint.textContent = f==='smart' ? 'Automatically balances quality and file size — no settings needed.'
+  formatHint.textContent = f==='smart' ? 'Converts to WebP at a balanced quality for the smallest file — keeps transparency. No settings needed.'
     : f==='original' ? 'Keeps each image in its own format (JPG→JPG, PNG→PNG…).'
     : f==='webp' ? 'WebP gives the smallest files at great quality — best for the web.'
     : f==='jpeg' ? 'Universal format for photos. No transparency.'
@@ -420,23 +420,33 @@ function resolveFmt(item){
 }
 async function compressOne(item){
   const canvas = sizedCanvas(item.srcCanvas);
-  const smart = formatSel.value === 'smart';
+  const bn = baseName(item.name);
+  const resized = canvas !== item.srcCanvas;
+
+  // Smart: convert to WebP (best compression, keeps transparency) at a balanced quality.
+  if(formatSel.value === 'smart'){
+    const webp = await canvasToBlob(canvas, 'image/webp', 0.82);
+    if(webp && webp.type === 'image/webp' && (resized || webp.size < item.origSize))
+      return { blob: webp, filename: bn + '.webp' };
+    return { blob: item.file, filename: item.name }; // already optimal — keep untouched
+  }
+
   const fmt = resolveFmt(item);
   const mime = MIME[fmt];
-  if(fmt==='png'){ const blob=await canvasToBlob(canvas,mime); return {blob,fmt}; }
-  const q = smart ? 0.8 : parseInt(qualityInput.value,10)/100;
-  const targetKB = smart ? NaN : parseFloat(targetSize.value);
+  if(fmt==='png') return { blob: await canvasToBlob(canvas, mime), filename: bn + '.png' };
+  const q = parseInt(qualityInput.value,10)/100;
+  const targetKB = parseFloat(targetSize.value);
   if((fmt==='jpeg'||fmt==='webp') && !isNaN(targetKB) && targetKB>0){
     const targetBytes = targetKB*1024;
     let lo=0.05, hi=0.95, best=await canvasToBlob(canvas,mime,hi);
     if(best.size>targetBytes){
       for(let i=0;i<8;i++){ const mid=(lo+hi)/2; const b=await canvasToBlob(canvas,mime,mid); if(b.size>targetBytes){ hi=mid; } else { lo=mid; best=b; } }
     }
-    return {blob:best,fmt};
+    return { blob: best, filename: bn + '.' + EXT[fmt] };
   }
   const blob = await canvasToBlob(canvas,mime,q);
   if(!blob||blob.type!==mime) throw new Error(fmt.toUpperCase()+' isn’t supported by this browser');
-  return {blob,fmt};
+  return { blob, filename: bn + '.' + EXT[fmt] };
 }
 
 convertBtn.onclick = async () => {
@@ -450,8 +460,8 @@ convertBtn.onclick = async () => {
     try{
       if(!item.srcCanvas) item.srcCanvas=await decode(item.file);
       if(item.result){ URL.revokeObjectURL(item.result.url); item.result=null; }
-      const {blob,fmt}=await compressOne(item);
-      item.result={ blob, url:URL.createObjectURL(blob), filename:baseName(item.name)+'.'+EXT[fmt], size:blob.size };
+      const {blob,filename}=await compressOne(item);
+      item.result={ blob, url:URL.createObjectURL(blob), filename, size:blob.size };
       item.status='done';
     }catch(e){ item.status='error'; item.error=e.message||'Compression failed'; }
     updateCard(item); idx++; progressFill.style.width=Math.round((idx/total)*100)+'%';
