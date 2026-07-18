@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Crop Image — Transcone</title>
+<meta name="description" content="Crop images right in your browser — drag to select, lock an aspect ratio, and download. Nothing uploaded." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23f97316'/%3E%3Cstop offset='1' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='white' font-family='Arial'%3E%E2%87%84%3C/text%3E%3C/svg%3E" />
+<meta property="og:title" content="Crop Image — Transcone" />
+<meta property="og:description" content="Crop images right in your browser — nothing uploaded." />
+<meta property="og:url" content="https://transcone.vercel.app/crop.html" />
+
+<style>
+  :root {
+    --bg: #0a0a0f; --bg-2: #0d0d15;
+    --glow: radial-gradient(900px 480px at 12% -8%, rgba(249,115,22,.16) 0%, transparent 60%),
+            radial-gradient(820px 460px at 108% 4%, rgba(236,72,153,.14) 0%, transparent 58%);
+    --surface: #13131c; --surface-2: #1a1a25; --surface-3: #20202d;
+    --border: #24242f; --border-strong: #313142;
+    --text: #f3f3f8; --muted: #8b8b9c;
+    --accent: #fb923c; --accent-2: #f472b6; --accent-grad: linear-gradient(135deg, #f97316, #ec4899);
+    --accent-soft: rgba(249,115,22,.14);
+    --success: #34d399; --success-soft: rgba(52,211,153,.13);
+    --info: #38bdf8; --info-soft: rgba(56,189,248,.13);
+    --danger: #fb7185;
+    --shadow: 0 4px 24px rgba(0,0,0,.35), 0 1px 3px rgba(0,0,0,.4);
+    --shadow-lg: 0 24px 64px rgba(0,0,0,.55);
+    --nav-bg: rgba(10,10,15,.72);
+  }
+  html[data-theme="light"] {
+    --bg: #fbfbfe; --bg-2: #f4f4fa;
+    --glow: radial-gradient(900px 480px at 12% -8%, rgba(249,115,22,.10) 0%, transparent 60%),
+            radial-gradient(820px 460px at 108% 4%, rgba(236,72,153,.08) 0%, transparent 58%);
+    --surface: #fff; --surface-2: #f5f5fa; --surface-3: #eeeef5;
+    --border: #e7e7f0; --border-strong: #dcdce8;
+    --text: #16161f; --muted: #6a6a7b;
+    --accent: #ea580c; --accent-2: #db2777; --accent-grad: linear-gradient(135deg, #ea580c, #db2777);
+    --accent-soft: rgba(234,88,12,.10);
+    --success: #059669; --success-soft: rgba(5,150,105,.10);
+    --info: #0284c7; --info-soft: rgba(2,132,199,.10);
+    --danger: #e11d48;
+    --shadow: 0 4px 24px rgba(31,33,66,.06), 0 1px 3px rgba(31,33,66,.05);
+    --shadow-lg: 0 24px 60px rgba(45,39,120,.14);
+    --nav-bg: rgba(251,251,254,.75);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); background-image: var(--glow); background-attachment: fixed; background-repeat: no-repeat; color: var(--text); line-height: 1.5; -webkit-font-smoothing: antialiased; min-height: 100vh; transition: background-color .3s, color .3s; }
+  a { color: inherit; text-decoration: none; }
+  .grad { background: var(--accent-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+
+  .nav { position: sticky; top: 0; z-index: 40; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); background: var(--nav-bg); border-bottom: 1px solid var(--border); }
+  .nav-inner { max-width: 1080px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo { width: 36px; height: 36px; border-radius: 10px; background: var(--accent-grad); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 19px; box-shadow: 0 6px 18px rgba(249,115,22,.45); flex-shrink: 0; }
+  .brand .word { font-size: 1.15rem; font-weight: 800; letter-spacing: -.02em; }
+  .nav-links { display: flex; gap: 4px; }
+  .nav-links a { font-size: .88rem; font-weight: 600; color: var(--muted); padding: 8px 14px; border-radius: 9px; transition: .15s; }
+  .nav-links a:hover, .nav-links a.active { color: var(--text); background: var(--surface-2); }
+  .theme-btn { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; font-size: 17px; display: flex; align-items: center; justify-content: center; transition: .2s; }
+  .theme-btn:hover { border-color: var(--accent); transform: translateY(-1px); }
+  @media (max-width: 640px) { .nav-links a { padding: 8px 10px; } }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px 72px; }
+  .hero { text-align: center; padding: 46px 0 8px; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 7px; font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent-soft); padding: 7px 14px; border-radius: 999px; }
+  .hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800; letter-spacing: -.035em; line-height: 1.08; margin-top: 18px; }
+  .hero .lead { color: var(--muted); font-size: clamp(1rem, 2.2vw, 1.12rem); margin: 14px auto 0; max-width: 540px; }
+
+  .embed-head { display: none; align-items: center; gap: 14px; text-align: left; }
+  .embed-head .eh-icon { width: 46px; height: 46px; border-radius: 12px; background: var(--accent-grad); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; box-shadow: 0 6px 16px rgba(249,115,22,.4); }
+  .embed-head .eh-title { font-size: 1.25rem; font-weight: 800; letter-spacing: -.02em; }
+  .embed-head .eh-desc { font-size: .84rem; color: var(--muted); margin-top: 2px; }
+
+  .dropzone { margin: 28px auto 0; max-width: 720px; border: 2px dashed var(--border-strong); border-radius: 24px; background: linear-gradient(180deg, var(--surface), var(--bg-2)); padding: 52px 24px; cursor: pointer; transition: .22s; box-shadow: var(--shadow); text-align: center; }
+  .dropzone:hover, .dropzone.drag { border-color: var(--accent); box-shadow: var(--shadow-lg), 0 0 0 4px var(--accent-soft); transform: translateY(-2px); }
+  .dropzone.hidden { display: none; }
+  .dropzone .di { width: 76px; height: 76px; margin: 0 auto 18px; border-radius: 20px; background: var(--surface-3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--accent); transition: .22s; }
+  .dropzone:hover .di { background: var(--accent-soft); transform: scale(1.05); }
+  .dropzone .di svg { width: 34px; height: 34px; }
+  .dropzone h3 { font-size: 1.4rem; font-weight: 800; letter-spacing: -.02em; }
+  .dropzone p { color: var(--muted); font-size: .98rem; margin-top: 6px; }
+  .browse { color: var(--accent); font-weight: 700; }
+  .dz-sub { margin-top: 12px; font-size: .78rem; color: var(--muted); opacity: .85; }
+
+  .trust { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
+  .tbadge { display: inline-flex; align-items: center; gap: 7px; font-size: .84rem; font-weight: 700; padding: 9px 16px; border-radius: 999px; }
+  .tbadge.green { color: var(--success); background: var(--success-soft); }
+  .tbadge.blue { color: var(--info); background: var(--info-soft); }
+  .tbadge.violet { color: var(--accent); background: var(--accent-soft); }
+  .embed-note { display: none; }
+  body.embed .embed-note { display: block; text-align: center; font-size: .76rem; color: var(--muted); margin-top: 18px; }
+
+  /* Editor */
+  .editor { display: none; margin-top: 24px; }
+  .editor.show { display: block; }
+  .editor-grid { display: grid; gap: 18px; }
+  @media (min-width: 860px) { .editor-grid { grid-template-columns: 1fr 300px; align-items: start; } }
+
+  .stage-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; min-height: 300px; }
+  .crop-stage { position: relative; display: inline-block; line-height: 0; max-width: 100%; overflow: hidden; touch-action: none; }
+  .crop-stage img { display: block; max-width: 100%; max-height: 66vh; user-select: none; -webkit-user-drag: none; }
+  .crop-box { position: absolute; border: 1.5px solid #fff; box-shadow: 0 0 0 100vmax rgba(0,0,0,.55); cursor: move; box-sizing: border-box; }
+  .crop-box::before, .crop-box::after { content: ""; position: absolute; background: rgba(255,255,255,.35); pointer-events: none; }
+  .crop-box::before { left: 33.33%; right: 33.33%; top: 0; bottom: 0; border-left: 1px solid rgba(255,255,255,.35); border-right: 1px solid rgba(255,255,255,.35); }
+  .crop-box::after { top: 33.33%; bottom: 33.33%; left: 0; right: 0; border-top: 1px solid rgba(255,255,255,.35); border-bottom: 1px solid rgba(255,255,255,.35); }
+  .ch { position: absolute; width: 14px; height: 14px; background: #fff; border: 1px solid rgba(0,0,0,.4); border-radius: 3px; z-index: 2; }
+  .ch[data-h="nw"] { top: -7px; left: -7px; cursor: nwse-resize; }
+  .ch[data-h="ne"] { top: -7px; right: -7px; cursor: nesw-resize; }
+  .ch[data-h="sw"] { bottom: -7px; left: -7px; cursor: nesw-resize; }
+  .ch[data-h="se"] { bottom: -7px; right: -7px; cursor: nwse-resize; }
+  .ch[data-h="n"] { top: -7px; left: 50%; margin-left: -7px; cursor: ns-resize; }
+  .ch[data-h="s"] { bottom: -7px; left: 50%; margin-left: -7px; cursor: ns-resize; }
+  .ch[data-h="w"] { left: -7px; top: 50%; margin-top: -7px; cursor: ew-resize; }
+  .ch[data-h="e"] { right: -7px; top: 50%; margin-top: -7px; cursor: ew-resize; }
+  .crop-stage.locked .ch[data-h="n"], .crop-stage.locked .ch[data-h="s"], .crop-stage.locked .ch[data-h="w"], .crop-stage.locked .ch[data-h="e"] { display: none; }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 18px; box-shadow: var(--shadow); }
+  .panel h4 { font-size: .78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 10px; }
+  .ratios { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .ratios button { border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-weight: 700; font-size: .8rem; padding: 9px 6px; border-radius: 10px; cursor: pointer; transition: .15s; }
+  .ratios button:hover { border-color: var(--accent); }
+  .ratios button.active { background: var(--accent-grad); color: #fff; border-color: transparent; }
+  select { width: 100%; font-family: inherit; font-size: .9rem; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 11px; padding: 11px 12px; outline: none; }
+  select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .dims { font-size: .82rem; color: var(--muted); font-weight: 700; margin-top: 4px; }
+  .dims b { color: var(--text); }
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+  button.btn { width: 100%; font-family: inherit; font-size: .9rem; font-weight: 800; border: none; border-radius: 12px; padding: 13px 18px; cursor: pointer; transition: .18s; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+  .btn-primary { background: var(--accent-grad); color: #fff; box-shadow: 0 8px 22px rgba(249,115,22,.4); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(249,115,22,.5); }
+  .btn-ghost { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); margin-top: 9px; }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .result { margin-top: 14px; display: none; align-items: center; gap: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+  .result.show { display: flex; }
+  .result .rthumb { width: 54px; height: 54px; border-radius: 9px; overflow: hidden; background: repeating-conic-gradient(var(--surface-3) 0% 25%, var(--border) 0% 50%) 50% / 12px 12px; flex-shrink: 0; }
+  .result .rthumb img { width: 100%; height: 100%; object-fit: contain; }
+  .result .rinfo { flex: 1; min-width: 0; font-size: .8rem; }
+  .result .rinfo .rd { font-weight: 800; }
+  .result .rinfo .rs { color: var(--muted); margin-top: 2px; }
+  .result a.dl { background: var(--success); color: #04120c; font-weight: 800; font-size: .8rem; padding: 9px 13px; border-radius: 9px; text-decoration: none; flex-shrink: 0; }
+  .result a.dl:hover { filter: brightness(1.08); }
+
+  footer { margin-top: 64px; padding-top: 28px; border-top: 1px solid var(--border); text-align: center; color: var(--muted); font-size: .82rem; }
+  footer .fbrand { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+  footer .fbrand .logo { width: 26px; height: 26px; border-radius: 7px; font-size: 14px; }
+  footer .dot { margin: 0 7px; opacity: .5; }
+  body.embed .nav, body.embed .hero .eyebrow, body.embed .hero h1, body.embed .hero .lead, body.embed .trust, body.embed footer { display: none !important; }
+  body.embed .hero { padding: 18px 0 0; text-align: left; }
+  body.embed .embed-head { display: flex; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); padding: 13px 22px; border-radius: 13px; font-size: .86rem; font-weight: 700; box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none; transition: .3s; z-index: 60; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="/"><span class="logo">⇄</span><span class="word">Trans<span class="grad">cone</span></span></a>
+    <div class="nav-links">
+      <a href="/">Converter</a>
+      <a href="/compress.html">Optimize</a>
+      <a href="/crop.html" class="active">Crop</a>
+    </div>
+    <div class="nav-right"><button class="theme-btn" id="themeBtn" title="Toggle theme">🌙</button></div>
+  </div>
+</nav>
+
+<div class="wrap">
+  <section class="hero">
+    <div class="embed-head"><div class="eh-icon">✂️</div><div class="eh-text"><div class="eh-title">Crop Image</div><div class="eh-desc">Drag to select an area and download — right in your browser.</div></div></div>
+    <span class="eyebrow">🔒 100% Private · Runs in your browser</span>
+    <h1>Crop images, <span class="grad">right in your browser</span></h1>
+    <p class="lead">Drop an image, drag the box to select the area, lock an aspect ratio if you like, and download.</p>
+  </section>
+
+  <div class="dropzone" id="dropzone">
+    <div class="di">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
+    </div>
+    <h3>Drop an image to crop</h3>
+    <p>or <span class="browse">browse files</span></p>
+    <div class="dz-sub">JPG · PNG · WebP · HEIC · BMP · GIF</div>
+    <input type="file" id="fileInput" accept="image/*,.heic,.heif" hidden />
+  </div>
+
+  <div class="trust">
+    <span class="tbadge green">🛡 100% Private</span>
+    <span class="tbadge blue">✂️ Precise crop</span>
+    <span class="tbadge violet">⚡ Instant · No upload</span>
+  </div>
+  <div class="embed-note">🔒 Your files never leave this device — everything runs locally in your browser.</div>
+
+  <div class="editor" id="editor">
+    <div class="editor-grid">
+      <div class="stage-wrap">
+        <div class="crop-stage" id="stage">
+          <img id="cropImg" alt="" />
+          <div class="crop-box" id="box">
+            <div class="ch" data-h="nw"></div><div class="ch" data-h="n"></div><div class="ch" data-h="ne"></div>
+            <div class="ch" data-h="w"></div><div class="ch" data-h="e"></div>
+            <div class="ch" data-h="sw"></div><div class="ch" data-h="s"></div><div class="ch" data-h="se"></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <h4>Aspect ratio</h4>
+        <div class="ratios" id="ratios">
+          <button data-r="free" class="active">Free</button>
+          <button data-r="1">1:1</button>
+          <button data-r="1.7778">16:9</button>
+          <button data-r="1.3333">4:3</button>
+          <button data-r="1.5">3:2</button>
+          <button data-r="0.5625">9:16</button>
+          <button data-r="0.75">3:4</button>
+          <button data-r="0.6667">2:3</button>
+          <button data-r="orig">Original</button>
+        </div>
+        <div class="divider"></div>
+        <h4>Output format</h4>
+        <select id="formatSel">
+          <option value="original" selected>Keep original</option>
+          <option value="png">PNG</option>
+          <option value="jpeg">JPG / JPEG</option>
+          <option value="webp">WebP</option>
+        </select>
+        <div class="dims" id="dims">Selection: <b>—</b></div>
+        <div class="divider"></div>
+        <button class="btn btn-primary" id="cropBtn">✂️ Crop &amp; Download</button>
+        <button class="btn btn-ghost" id="resetBtn">Reset selection</button>
+        <button class="btn btn-ghost" id="newBtn">New image</button>
+        <div class="result" id="result">
+          <div class="rthumb"><img id="resultImg" alt="Cropped" /></div>
+          <div class="rinfo"><div class="rd" id="resultDims">—</div><div class="rs" id="resultSize">—</div></div>
+          <a class="dl" id="resultDl" download>⬇ Save</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="fbrand"><span class="logo">⇄</span> Transcone</div>
+    <div>Everything runs locally in your browser <span class="dot">·</span> No data collected</div>
+    <div style="margin-top:10px;">© 2026 Transcone <span class="dot">·</span> a <span style="font-weight:700;color:var(--text)">Transparency&nbsp;Strategies</span> project</div>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id)=>document.getElementById(id);
+const dropzone=$('dropzone'), fileInput=$('fileInput'), editor=$('editor'), stage=$('stage'), cropImg=$('cropImg'), box=$('box');
+const ratios=$('ratios'), formatSel=$('formatSel'), dimsEl=$('dims'), cropBtn=$('cropBtn'), resetBtn=$('resetBtn'), newBtn=$('newBtn');
+const result=$('result'), resultImg=$('resultImg'), resultDims=$('resultDims'), resultSize=$('resultSize'), resultDl=$('resultDl'), themeBtn=$('themeBtn');
+
+const MIME={jpeg:'image/jpeg',png:'image/png',webp:'image/webp'}, EXT={jpeg:'jpg',png:'png',webp:'webp'};
+let srcCanvas=null, srcName='image', srcType='', aspect=null;
+let rect={x:0.1,y:0.1,w:0.8,h:0.8}; // fractions of displayed image
+let lastResultUrl=null;
+
+/* Theme + embed */
+function applyTheme(t){ document.documentElement.setAttribute('data-theme',t); themeBtn.textContent=t==='dark'?'☀️':'🌙'; try{localStorage.setItem('tc-theme',t);}catch(e){} }
+const _p=new URLSearchParams(location.search);
+if(_p.has('embed')) document.body.classList.add('embed');
+const _tp=_p.get('theme');
+if(_tp==='light'||_tp==='dark'){ document.documentElement.setAttribute('data-theme',_tp); themeBtn.textContent=_tp==='dark'?'☀️':'🌙'; }
+else applyTheme((()=>{try{return localStorage.getItem('tc-theme')||'dark';}catch(e){return 'dark';}})());
+themeBtn.onclick=()=>applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
+
+let toastT; function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2400); }
+function humanSize(b){ if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(2)+' MB'; }
+function extOf(n){ return (n.split('.').pop()||'').toLowerCase(); }
+function baseName(n){ return n.replace(/\.[^.]+$/,''); }
+
+/* Lazy HEIC */
+let _heicP; function ensureHeic(){ if(window.heic2any) return Promise.resolve(); if(!_heicP){ _heicP=new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js'; s.onload=res; s.onerror=()=>rej(new Error('Could not load HEIC support')); document.head.appendChild(s); }); } return _heicP; }
+
+/* Drop / browse */
+dropzone.onclick=()=>fileInput.click(); newBtn.onclick=()=>fileInput.click();
+fileInput.onchange=(e)=>{ if(e.target.files[0]) loadFile(e.target.files[0]); fileInput.value=''; };
+['dragenter','dragover'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.add('drag');}));
+['dragleave','drop'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.remove('drag');}));
+dropzone.addEventListener('drop',e=>{e.preventDefault(); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);});
+window.addEventListener('dragover',e=>e.preventDefault()); window.addEventListener('drop',e=>e.preventDefault());
+
+async function loadFile(file){
+  const ext=extOf(file.name), type=file.type;
+  if(!(type.startsWith('image/')||['heic','heif','bmp'].includes(ext))){ toast('Unsupported file'); return; }
+  srcName=file.name; srcType=type;
+  try{
+    let blob=file;
+    if(ext==='heic'||ext==='heif'||type==='image/heic'||type==='image/heif'){ await ensureHeic(); const out=await window.heic2any({blob:file,toType:'image/png'}); blob=Array.isArray(out)?out[0]:out; }
+    const url=URL.createObjectURL(blob);
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight; c.getContext('2d').drawImage(img,0,0);
+      srcCanvas=c; URL.revokeObjectURL(url);
+      cropImg.src=c.toDataURL('image/png');
+      cropImg.onload=()=>{ dropzone.classList.add('hidden'); editor.classList.add('show'); result.classList.remove('show'); setRatio('free',true); render(); };
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); toast('Could not read this image'); };
+    img.src=url;
+  }catch(e){ toast(e.message||'Could not load image'); }
+}
+
+function stageSize(){ return { W: cropImg.clientWidth, H: cropImg.clientHeight }; }
+function render(){
+  const {W,H}=stageSize();
+  box.style.left=(rect.x*W)+'px'; box.style.top=(rect.y*H)+'px';
+  box.style.width=(rect.w*W)+'px'; box.style.height=(rect.h*H)+'px';
+  if(srcCanvas){ const cw=Math.round(rect.w*srcCanvas.width), ch=Math.round(rect.h*srcCanvas.height); dimsEl.innerHTML=`Selection: <b>${cw} × ${ch}px</b>`; }
+}
+window.addEventListener('resize',()=>{ if(editor.classList.contains('show')) render(); });
+
+/* Aspect ratios (ratio = width/height, in image pixels) */
+function setRatio(r, silent){
+  ratios.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.r===r));
+  if(r==='free'){ aspect=null; stage.classList.remove('locked'); if(!silent) render(); return; }
+  aspect = r==='orig' ? (srcCanvas.width/srcCanvas.height) : parseFloat(r);
+  stage.classList.add('locked');
+  // shape a centred box of this ratio, in fractions (account for image pixel dims)
+  const iw=srcCanvas.width, ih=srcCanvas.height;
+  let cw=iw, ch=cw/aspect; if(ch>ih){ ch=ih; cw=ch*aspect; }
+  const fw=cw/iw, fh=ch/ih;
+  rect={ x:(1-fw)/2, y:(1-fh)/2, w:fw, h:fh };
+  render();
+}
+ratios.querySelectorAll('button').forEach(b=>b.onclick=()=>setRatio(b.dataset.r));
+
+/* Dragging */
+let drag=null;
+function ptFrac(e){ const r=cropImg.getBoundingClientRect(); return { fx:(e.clientX-r.left)/r.width, fy:(e.clientY-r.top)/r.height }; }
+function clamp01(v){ return v<0?0:v>1?1:v; }
+
+stage.addEventListener('pointerdown',e=>{
+  const handle = e.target.classList.contains('ch') ? e.target.dataset.h : (e.target===box ? 'move' : null);
+  if(!handle) return;
+  e.preventDefault(); try{ stage.setPointerCapture(e.pointerId); }catch(_){}
+  const p=ptFrac(e);
+  drag={ handle, start:{...rect}, px:p.fx, py:p.fy };
+});
+stage.addEventListener('pointermove',e=>{
+  if(!drag) return;
+  const p=ptFrac(e); let dx=p.fx-drag.px, dy=p.fy-drag.py;
+  const s=drag.start; const {W,H}=stageSize(); const ar = aspect ? aspect*(H/W) : null; // ratio in fraction-space (w_frac/h_frac)
+  const MIN=0.03;
+  if(drag.handle==='move'){
+    let nx=clamp01(s.x+dx), ny=clamp01(s.y+dy);
+    nx=Math.min(nx, 1-s.w); ny=Math.min(ny, 1-s.h);
+    rect={x:Math.max(0,nx), y:Math.max(0,ny), w:s.w, h:s.h};
+  } else if(ar){
+    // aspect-locked: corners only. width is driver.
+    const h=drag.handle;
+    let x1=s.x, y1=s.y, x2=s.x+s.w, y2=s.y+s.h;
+    let nw;
+    if(h.includes('e')) nw=s.w+dx; else nw=s.w-dx;
+    nw=Math.max(MIN, nw);
+    let nh=nw/ar;
+    let nx, ny;
+    if(h.includes('e')) nx=x1; else nx=x2-nw;
+    if(h.includes('s')) ny=y1; else ny=y2-nh;
+    // fit inside [0,1] keeping the anchor corner
+    if(nx<0){ nw+=nx; nh=nw/ar; if(!h.includes('e')) nx=0; }
+    if(ny<0){ nh+=ny; nw=nh*ar; if(!h.includes('s')) ny=0; }
+    if(nx+nw>1){ nw=1-nx; nh=nw/ar; }
+    if(ny+nh>1){ nh=1-ny; nw=nh*ar; }
+    if(!h.includes('e')) nx=x2-nw; if(!h.includes('s')) ny=y2-nh;
+    if(nw>=MIN && nh>=MIN) rect={x:Math.max(0,nx), y:Math.max(0,ny), w:nw, h:nh};
+  } else {
+    // free: move edges independently
+    let x1=s.x, y1=s.y, x2=s.x+s.w, y2=s.y+s.h; const h=drag.handle;
+    if(h.includes('e')) x2=clamp01(s.x+s.w+dx);
+    if(h.includes('w')) x1=clamp01(s.x+dx);
+    if(h.includes('s')) y2=clamp01(s.y+s.h+dy);
+    if(h.includes('n')) y1=clamp01(s.y+dy);
+    if(x2-x1<MIN){ if(h.includes('w')) x1=x2-MIN; else x2=x1+MIN; }
+    if(y2-y1<MIN){ if(h.includes('n')) y1=y2-MIN; else y2=y1+MIN; }
+    rect={x:Math.max(0,x1), y:Math.max(0,y1), w:Math.min(1,x2)-Math.max(0,x1), h:Math.min(1,y2)-Math.max(0,y1)};
+  }
+  render();
+});
+stage.addEventListener('pointerup',()=>drag=null);
+stage.addEventListener('pointercancel',()=>drag=null);
+
+resetBtn.onclick=()=>{ setRatio(aspect?[...ratios.querySelectorAll('.active')][0]?.dataset.r||'free':'free', false); if(!aspect){ rect={x:0.05,y:0.05,w:0.9,h:0.9}; render(); } };
+
+function outFmt(){
+  const f=formatSel.value;
+  if(f!=='original') return f;
+  if(srcType==='image/png') return 'png';
+  if(srcType==='image/webp') return 'webp';
+  if(srcType==='image/jpeg') return 'jpeg';
+  return 'png';
+}
+cropBtn.onclick=()=>{
+  if(!srcCanvas) return;
+  const iw=srcCanvas.width, ih=srcCanvas.height;
+  const sx=Math.round(rect.x*iw), sy=Math.round(rect.y*ih);
+  const sw=Math.max(1,Math.round(rect.w*iw)), sh=Math.max(1,Math.round(rect.h*ih));
+  const c=document.createElement('canvas'); c.width=sw; c.height=sh;
+  c.getContext('2d').drawImage(srcCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+  const fmt=outFmt(), mime=MIME[fmt];
+  c.toBlob(blob=>{
+    if(!blob){ toast('Could not export'); return; }
+    if(lastResultUrl) URL.revokeObjectURL(lastResultUrl);
+    lastResultUrl=URL.createObjectURL(blob);
+    resultImg.src=c.toDataURL('image/png');
+    resultDims.textContent=`${sw} × ${sh}px · ${fmt.toUpperCase()}`;
+    resultSize.textContent=humanSize(blob.size);
+    resultDl.href=lastResultUrl; resultDl.download=baseName(srcName)+'-cropped.'+EXT[fmt];
+    result.classList.add('show');
+    resultDl.click();
+    toast('✅ Cropped');
+  }, mime, fmt==='png'?undefined:0.92);
+};
+</script>
+</body>
+</html>
