@@ -173,6 +173,25 @@
   footer .fbrand .logo { width: 26px; height: 26px; border-radius: 7px; font-size: 14px; }
   footer .dot { margin: 0 7px; opacity: .5; }
 
+  /* Before/after compare modal */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.72); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 80; padding: 20px; }
+  .modal.hidden { display: none; }
+  .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow-lg); width: 100%; max-width: 760px; max-height: 92vh; overflow: auto; padding: 16px; }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; font-weight: 800; font-size: .92rem; }
+  .modal-head .mt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .modal-head button { flex-shrink: 0; width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; font-size: 15px; }
+  .modal-head button:hover { color: var(--accent); border-color: var(--accent); }
+  .cmp { position: relative; width: 100%; max-height: 66vh; border-radius: 12px; overflow: hidden; background: repeating-conic-gradient(var(--surface-2) 0% 25%, var(--surface-3) 0% 50%) 50% / 18px 18px; user-select: none; touch-action: none; cursor: ew-resize; }
+  .cmp img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+  .cmp-line { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.35); left: 50%; transform: translateX(-1px); pointer-events: none; }
+  .cmp-handle { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 36px; height: 36px; border-radius: 50%; background: #fff; color: #111; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.45); }
+  .cmp-tag { position: absolute; top: 10px; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; padding: 4px 9px; border-radius: 6px; background: rgba(0,0,0,.6); color: #fff; pointer-events: none; }
+  .cmp-tag.left { left: 10px; } .cmp-tag.right { right: 10px; }
+  .cmp-slider { width: 100%; margin-top: 14px; }
+  .cmp-meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: .84rem; }
+  .cmp-meta .b { color: var(--muted); font-weight: 700; }
+  .cmp-meta .a { color: var(--success); font-weight: 800; }
+
   .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); padding: 13px 22px; border-radius: 13px; font-size: .86rem; font-weight: 700; box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none; transition: .3s; z-index: 60; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
@@ -297,6 +316,21 @@
     <div>Everything runs locally in your browser <span class="dot">·</span> No data collected</div>
     <div style="margin-top:10px;">© 2026 Transcone <span class="dot">·</span> a <span style="font-weight:700;color:var(--text)">Transparency&nbsp;Strategies</span> project</div>
   </footer>
+</div>
+
+<div class="modal hidden" id="cmpModal">
+  <div class="modal-box">
+    <div class="modal-head"><span class="mt" id="cmpTitle">Compare</span> <button id="cmpClose" title="Close">✕</button></div>
+    <div class="cmp" id="cmp">
+      <img id="cmpBefore" alt="Before" />
+      <img id="cmpAfter" alt="After" />
+      <div class="cmp-line" id="cmpLine"><div class="cmp-handle">⇆</div></div>
+      <span class="cmp-tag left">Before</span>
+      <span class="cmp-tag right">After</span>
+    </div>
+    <input type="range" class="cmp-slider" id="cmpSlider" min="0" max="100" value="50" />
+    <div class="cmp-meta"><span class="b" id="cmpBeforeMeta">Before</span><span class="a" id="cmpAfterMeta">After</span></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -499,13 +533,44 @@ function updateCard(item){
     const out=item.result.size, diff=item.origSize>0?Math.round((1-out/item.origSize)*100):0;
     const dh = diff>0?`<span class="save">↓ ${diff}% smaller</span>`:diff<0?`<span class="grow">↑ ${-diff}% larger</span>`:'';
     if(sub) sub.innerHTML=`${humanSize(item.origSize)} <span class="arrow">→</span> ${humanSize(out)} &nbsp; ${dh}`;
-    right.innerHTML=`<a class="icon-btn dl-btn" style="width:auto;padding:0 13px;font-size:.8rem;font-weight:800;gap:5px" href="${item.result.url}" download="${escapeHtml(item.result.filename)}">⬇ Download</a><button class="icon-btn" title="Remove" onclick="removeItem(${item.id})">✕</button>`;
+    right.innerHTML=`<a class="icon-btn dl-btn" style="width:auto;padding:0 13px;font-size:.8rem;font-weight:800;gap:5px" href="${item.result.url}" download="${escapeHtml(item.result.filename)}">⬇ Download</a><button class="icon-btn" title="Compare before / after" onclick="openCompare(${item.id})">⇆</button><button class="icon-btn" title="Remove" onclick="removeItem(${item.id})">✕</button>`;
+    const thumb=document.querySelector('#card-'+item.id+' .thumb'); if(thumb){ thumb.style.cursor='pointer'; thumb.title='Compare before / after'; thumb.onclick=()=>openCompare(item.id); }
   }
   refreshStatus();
 }
 function removeItem(id){ const item=items.find(i=>i.id===id); if(item&&item.result) URL.revokeObjectURL(item.result.url); items=items.filter(i=>i.id!==id); const el=$('card-'+id); if(el) el.remove(); if(!items.length) clearBtn.onclick(); refreshStatus(); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 window.removeItem = removeItem;
+
+/* ---------- Before / after compare ---------- */
+const cmpModal=$('cmpModal'), cmpEl=$('cmp'), cmpBefore=$('cmpBefore'), cmpAfter=$('cmpAfter'), cmpLine=$('cmpLine'),
+      cmpSlider=$('cmpSlider'), cmpTitle=$('cmpTitle'), cmpBeforeMeta=$('cmpBeforeMeta'), cmpAfterMeta=$('cmpAfterMeta'), cmpClose=$('cmpClose');
+let cmpBeforeURL=null, cmpDragging=false;
+function setCmp(v){ v=Math.max(0,Math.min(100,v)); cmpAfter.style.clipPath=`inset(0 0 0 ${v}%)`; cmpLine.style.left=v+'%'; }
+function openCompare(id){
+  const item=items.find(i=>i.id===id);
+  if(!item||!item.result||!item.srcCanvas) return;
+  cmpBefore.src=item.srcCanvas.toDataURL('image/png'); // synchronous — always ready
+  cmpAfter.src=item.result.url;
+  cmpEl.style.aspectRatio = item.srcCanvas.width+' / '+item.srcCanvas.height;
+  cmpSlider.value=50; setCmp(50);
+  cmpTitle.textContent=item.name;
+  const saved=item.origSize>0?Math.round((1-item.result.size/item.origSize)*100):0;
+  cmpBeforeMeta.textContent=`Before · ${humanSize(item.origSize)}`;
+  cmpAfterMeta.textContent=`After · ${humanSize(item.result.size)}`+(saved>0?` · ↓ ${saved}% smaller`:'');
+  cmpModal.classList.remove('hidden');
+}
+cmpSlider.oninput=()=>setCmp(+cmpSlider.value);
+function cmpDragTo(x){ const r=cmpEl.getBoundingClientRect(); const v=(x-r.left)/r.width*100; cmpSlider.value=v; setCmp(v); }
+cmpEl.addEventListener('pointerdown',e=>{ cmpDragging=true; try{cmpEl.setPointerCapture(e.pointerId);}catch(_){} cmpDragTo(e.clientX); });
+cmpEl.addEventListener('pointermove',e=>{ if(cmpDragging) cmpDragTo(e.clientX); });
+cmpEl.addEventListener('pointerup',()=>cmpDragging=false);
+cmpEl.addEventListener('pointercancel',()=>cmpDragging=false);
+function closeCompare(){ cmpModal.classList.add('hidden'); if(cmpBeforeURL){ URL.revokeObjectURL(cmpBeforeURL); cmpBeforeURL=null; } }
+cmpClose.onclick=closeCompare;
+cmpModal.addEventListener('click',e=>{ if(e.target===cmpModal) closeCompare(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !cmpModal.classList.contains('hidden')) closeCompare(); });
+window.openCompare=openCompare;
 </script>
 </body>
 </html>
