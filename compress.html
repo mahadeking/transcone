@@ -533,7 +533,7 @@ function updateCard(item){
     const out=item.result.size, diff=item.origSize>0?Math.round((1-out/item.origSize)*100):0;
     const dh = diff>0?`<span class="save">↓ ${diff}% smaller</span>`:diff<0?`<span class="grow">↑ ${-diff}% larger</span>`:'';
     if(sub) sub.innerHTML=`${humanSize(item.origSize)} <span class="arrow">→</span> ${humanSize(out)} &nbsp; ${dh}`;
-    right.innerHTML=`<a class="icon-btn dl-btn" style="width:auto;padding:0 13px;font-size:.8rem;font-weight:800;gap:5px" href="${item.result.url}" download="${escapeHtml(item.result.filename)}">⬇ Download</a><button class="icon-btn" title="Compare before / after" onclick="openCompare(${item.id})">⇆</button><button class="icon-btn" title="Remove" onclick="removeItem(${item.id})">✕</button>`;
+    right.innerHTML=`<a class="icon-btn dl-btn" style="width:auto;padding:0 13px;font-size:.8rem;font-weight:800;gap:5px" href="${item.result.url}" download="${escapeHtml(item.result.filename)}">⬇ Download</a><button class="icon-btn" style="width:auto;padding:0 12px;font-size:.78rem;font-weight:700;gap:5px" title="Compare before / after" onclick="openCompare(${item.id})">⇆ Compare</button><button class="icon-btn" title="Remove" onclick="removeItem(${item.id})">✕</button>`;
     const thumb=document.querySelector('#card-'+item.id+' .thumb'); if(thumb){ thumb.style.cursor='pointer'; thumb.title='Compare before / after'; thumb.onclick=()=>openCompare(item.id); }
   }
   refreshStatus();
