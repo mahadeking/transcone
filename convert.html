@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Transcone — Private Image Converter</title>
+<meta name="description" content="Convert images between JPG, PNG, WebP, AVIF, PDF, HEIC, BMP, GIF, TIFF, SVG and ICO — all processed right in your browser." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23f97316'/%3E%3Cstop offset='1' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='white' font-family='Arial'%3E%E2%87%84%3C/text%3E%3C/svg%3E" />
+<meta property="og:title" content="Transcone — Private Image Converter" />
+<meta property="og:description" content="Convert JPG, PNG, WebP, AVIF, PDF, HEIC, BMP, GIF, TIFF, SVG & ICO — all processed right in your browser." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://transcone.vercel.app/convert.html" />
+<meta name="twitter:card" content="summary_large_image" />
+
+<!-- Format helper libraries load on demand — only when you actually use that
+     specific format. JPG/PNG/WebP/BMP/SVG/ICO need nothing extra, so most
+     visits download zero external JS. Conversion is always 100% in-browser. -->
+
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg-2: #0d0d15;
+    --glow: radial-gradient(900px 480px at 12% -8%, rgba(249,115,22,.18) 0%, transparent 60%),
+            radial-gradient(820px 460px at 108% 4%, rgba(236,72,153,.15) 0%, transparent 58%);
+    --surface: #13131c;
+    --surface-2: #1a1a25;
+    --surface-3: #20202d;
+    --border: #24242f;
+    --border-strong: #313142;
+    --text: #f3f3f8;
+    --muted: #8b8b9c;
+    --accent: #fb923c;
+    --accent-2: #f472b6;
+    --accent-grad: linear-gradient(135deg, #f97316, #ec4899);
+    --accent-soft: rgba(249,115,22,.14);
+    --success: #34d399;
+    --success-soft: rgba(52,211,153,.13);
+    --info: #38bdf8;
+    --info-soft: rgba(56,189,248,.13);
+    --danger: #fb7185;
+    --danger-soft: rgba(251,113,133,.13);
+    --shadow: 0 4px 24px rgba(0,0,0,.35), 0 1px 3px rgba(0,0,0,.4);
+    --shadow-lg: 0 24px 64px rgba(0,0,0,.55);
+    --nav-bg: rgba(10,10,15,.72);
+  }
+  html[data-theme="light"] {
+    --bg: #fbfbfe;
+    --bg-2: #f4f4fa;
+    --glow: radial-gradient(900px 480px at 12% -8%, rgba(249,115,22,.12) 0%, transparent 60%),
+            radial-gradient(820px 460px at 108% 4%, rgba(236,72,153,.10) 0%, transparent 58%);
+    --surface: #ffffff;
+    --surface-2: #f5f5fa;
+    --surface-3: #eeeef5;
+    --border: #e7e7f0;
+    --border-strong: #dcdce8;
+    --text: #16161f;
+    --muted: #6a6a7b;
+    --accent: #ea580c;
+    --accent-2: #db2777;
+    --accent-grad: linear-gradient(135deg, #ea580c, #db2777);
+    --accent-soft: rgba(234,88,12,.10);
+    --success: #059669;
+    --success-soft: rgba(5,150,105,.10);
+    --info: #0284c7;
+    --info-soft: rgba(2,132,199,.10);
+    --danger: #e11d48;
+    --danger-soft: rgba(225,29,72,.09);
+    --shadow: 0 4px 24px rgba(31,33,66,.06), 0 1px 3px rgba(31,33,66,.05);
+    --shadow-lg: 0 24px 60px rgba(45,39,120,.14);
+    --nav-bg: rgba(251,251,254,.75);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    background-image: var(--glow);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color .3s, color .3s;
+    min-height: 100vh;
+  }
+  a { color: inherit; text-decoration: none; }
+  .grad {
+    background: var(--accent-grad);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+
+  /* ---------- Nav ---------- */
+  .nav {
+    position: sticky; top: 0; z-index: 40;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    background: var(--nav-bg); border-bottom: 1px solid var(--border);
+  }
+  .nav-inner {
+    max-width: 1080px; margin: 0 auto; padding: 12px 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo {
+    width: 36px; height: 36px; border-radius: 10px; background: var(--accent-grad);
+    display: flex; align-items: center; justify-content: center; color: #fff; font-size: 19px;
+    box-shadow: 0 6px 18px rgba(249,115,22,.45); flex-shrink: 0;
+  }
+  .brand .word { font-size: 1.15rem; font-weight: 800; letter-spacing: -.02em; }
+  .nav-links { display: flex; gap: 4px; }
+  .nav-links a {
+    font-size: .88rem; font-weight: 600; color: var(--muted);
+    padding: 8px 14px; border-radius: 9px; transition: .15s;
+  }
+  .nav-links a:hover { color: var(--text); background: var(--surface-2); }
+  .nav-links a.active { color: var(--text); background: var(--surface-2); }
+  .nav-right { display: flex; align-items: center; gap: 8px; }
+  .theme-btn {
+    width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); cursor: pointer; font-size: 17px;
+    display: flex; align-items: center; justify-content: center; transition: .2s;
+  }
+  .theme-btn:hover { border-color: var(--accent); transform: translateY(-1px); }
+  @media (max-width: 640px) { .nav-links { display: none; } }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px 72px; }
+  section { scroll-margin-top: 84px; }
+
+  /* ---------- Hero ---------- */
+  .hero { text-align: center; padding: 54px 0 8px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--accent); background: var(--accent-soft);
+    border: 1px solid var(--accent-soft); padding: 7px 14px; border-radius: 999px;
+  }
+  .hero h1 {
+    font-size: clamp(2.1rem, 5.5vw, 3.6rem); font-weight: 800; letter-spacing: -.035em;
+    line-height: 1.08; margin-top: 20px;
+  }
+  .hero .lead {
+    color: var(--muted); font-size: clamp(1rem, 2.2vw, 1.18rem);
+    margin: 16px auto 0; max-width: 560px;
+  }
+
+  /* ---------- Dropzone ---------- */
+  .dropzone {
+    margin: 30px auto 0; max-width: 720px;
+    border: 2px dashed var(--border-strong); border-radius: 24px;
+    background: linear-gradient(180deg, var(--surface), var(--bg-2));
+    padding: 52px 24px; cursor: pointer; transition: .22s; box-shadow: var(--shadow);
+  }
+  .dropzone:hover, .dropzone.drag {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-lg), 0 0 0 4px var(--accent-soft);
+    transform: translateY(-2px);
+  }
+  .dropzone .di {
+    width: 76px; height: 76px; margin: 0 auto 18px; border-radius: 20px;
+    background: var(--surface-3); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; color: var(--accent);
+    transition: .22s;
+  }
+  .dropzone:hover .di { background: var(--accent-soft); transform: scale(1.05); }
+  .dropzone .di svg { width: 34px; height: 34px; }
+  .dropzone h3 { font-size: 1.4rem; font-weight: 800; letter-spacing: -.02em; }
+  .dropzone p { color: var(--muted); font-size: .98rem; margin-top: 6px; }
+  .browse { color: var(--accent); font-weight: 700; }
+  .browse:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .dz-pill {
+    display: inline-block; margin-top: 18px; font-size: .8rem; font-weight: 600; color: var(--muted);
+    background: var(--surface-2); border: 1px solid var(--border); padding: 8px 15px; border-radius: 999px;
+  }
+  .dz-sub { margin-top: 10px; font-size: .76rem; color: var(--muted); opacity: .8; }
+
+  /* ---------- Trust badges ---------- */
+  .trust { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 26px; }
+  .tbadge {
+    display: inline-flex; align-items: center; gap: 7px; font-size: .84rem; font-weight: 700;
+    padding: 9px 16px; border-radius: 999px; border: 1px solid transparent;
+  }
+  .tbadge.green  { color: var(--success); background: var(--success-soft); border-color: var(--success-soft); }
+  .tbadge.blue   { color: var(--info);    background: var(--info-soft);    border-color: var(--info-soft); }
+  .tbadge.violet { color: var(--accent);  background: var(--accent-soft);  border-color: var(--accent-soft); }
+
+  /* ---------- Settings panel ---------- */
+  .panel {
+    margin: 28px auto 0; max-width: 860px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; box-shadow: var(--shadow); overflow: hidden;
+  }
+  .panel.hidden, .toolbar.hidden, #grid.hidden { display: none; }
+  .panel-head {
+    padding: 15px 22px; border-bottom: 1px solid var(--border); font-weight: 800; font-size: .95rem;
+    display: flex; align-items: center; gap: 9px;
+  }
+  .panel-head .dotmark { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-grad); }
+  .panel-body { padding: 20px 22px; display: grid; gap: 20px; }
+  @media (min-width: 700px) { .panel-body { grid-template-columns: 1fr 1fr; } }
+
+  .field label { display: block; font-size: .78rem; font-weight: 700; margin-bottom: 8px; letter-spacing: .01em; }
+  .field .hint { font-size: .75rem; color: var(--muted); margin-top: 7px; min-height: 1em; }
+
+  select, input[type="text"], input[type="number"] {
+    width: 100%; font-family: inherit; font-size: .92rem; color: var(--text);
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 13px; outline: none; transition: .18s;
+  }
+  select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  .slider-row { display: flex; align-items: center; gap: 13px; }
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none; flex: 1; height: 6px; border-radius: 999px;
+    background: var(--surface-3); outline: none; cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent-grad); box-shadow: 0 2px 8px rgba(249,115,22,.5);
+    cursor: pointer; border: 2px solid var(--surface);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--surface);
+    background: var(--accent); cursor: pointer;
+  }
+  .qval {
+    min-width: 48px; text-align: center; font-weight: 800; font-size: .82rem;
+    background: var(--accent-soft); color: var(--accent); border-radius: 9px; padding: 6px 7px;
+  }
+
+  .resize-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 9px; align-items: end; }
+  .unit-toggle { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+  .unit-toggle button {
+    border: none; background: transparent; color: var(--muted); font-weight: 700; font-size: .78rem;
+    padding: 8px 12px; border-radius: 8px; cursor: pointer; transition: .15s;
+  }
+  .unit-toggle button.active { background: var(--accent-grad); color: #fff; }
+
+  /* Segmented control (rotate / background) */
+  .seg { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 3px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+  .seg button { border: none; background: transparent; color: var(--muted); font-weight: 700; font-size: .78rem; padding: 8px 13px; border-radius: 8px; cursor: pointer; transition: .15s; }
+  .seg button.active { background: var(--accent-grad); color: #fff; }
+  .seg input[type="color"] { width: 34px; height: 30px; padding: 2px; margin-left: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); cursor: pointer; }
+
+  /* Adjustments & crop */
+  .adjust { display: grid; gap: 12px; }
+  .adj-row { display: flex; align-items: center; gap: 12px; }
+  .adj-label { font-size: .8rem; font-weight: 600; color: var(--muted); min-width: 84px; }
+  .crop-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .crop-grid .cg { display: flex; flex-direction: column; gap: 5px; }
+  .crop-grid .cg span { font-size: .72rem; color: var(--muted); font-weight: 700; }
+  .check { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: .83rem; color: var(--muted); cursor: pointer; user-select: none; }
+  .check input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar {
+    margin: 16px auto 0; max-width: 860px; display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .toolbar .status { font-size: .88rem; color: var(--muted); font-weight: 700; }
+  .toolbar .actions { display: flex; gap: 9px; flex-wrap: wrap; }
+  button.btn {
+    font-family: inherit; font-size: .88rem; font-weight: 700; border: none; border-radius: 12px;
+    padding: 12px 20px; cursor: pointer; transition: .18s; display: inline-flex; align-items: center; gap: 7px;
+  }
+  .btn-primary { background: var(--accent-grad); color: #fff; box-shadow: 0 8px 22px rgba(249,115,22,.4); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(249,115,22,.5); }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-success { background: var(--success); color: #04120c; }
+  .btn-success:hover { transform: translateY(-1px); filter: brightness(1.06); }
+
+  /* Progress bar */
+  .progress-wrap { max-width: 860px; margin: 14px auto 0; display: flex; align-items: center; gap: 14px; }
+  .progress-wrap.hidden { display: none; }
+  .progress-track { flex: 1; height: 9px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+  .progress-fill { height: 100%; width: 0%; border-radius: 999px; background: var(--accent-grad); transition: width .25s ease; }
+  .progress-label { font-size: .82rem; font-weight: 700; color: var(--muted); white-space: nowrap; min-width: 108px; text-align: right; }
+
+  /* ---------- File grid ---------- */
+  #grid { margin: 16px auto 0; max-width: 860px; display: grid; gap: 12px; }
+  @media (min-width: 640px) { #grid { grid-template-columns: 1fr 1fr; } }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 13px; display: flex; gap: 13px; align-items: center; box-shadow: var(--shadow); transition: .2s;
+  }
+  .card:hover { border-color: var(--border-strong); }
+  .card .thumb {
+    width: 64px; height: 64px; border-radius: 12px; flex-shrink: 0; overflow: hidden;
+    background: repeating-conic-gradient(var(--surface-2) 0% 25%, var(--surface-3) 0% 50%) 50% / 14px 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card .thumb img { width: 100%; height: 100%; object-fit: contain; }
+  .card .thumb .ph { font-size: 24px; }
+  .card .info { flex: 1; min-width: 0; }
+  .card .name { font-weight: 700; font-size: .87rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .sub { font-size: .75rem; color: var(--muted); margin-top: 4px; }
+  .card .sub .arrow { color: var(--accent); font-weight: 800; }
+  .card .save { color: var(--success); font-weight: 800; }
+  .card .grow { color: var(--danger); font-weight: 800; }
+  .card .right { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; flex-shrink: 0; }
+  .pill { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; padding: 5px 9px; border-radius: 7px; }
+  .pill.pending { background: var(--surface-3); color: var(--muted); }
+  .pill.working { background: var(--accent-soft); color: var(--accent); }
+  .pill.done { background: var(--success-soft); color: var(--success); }
+  .pill.error { background: var(--danger-soft); color: var(--danger); }
+  .icon-btn {
+    width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted); cursor: pointer; font-size: 15px;
+    display: flex; align-items: center; justify-content: center; transition: .15s;
+  }
+  .icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .dl-btn { background: var(--success); color: #04120c; border: none; }
+  .dl-btn:hover { filter: brightness(1.08); }
+  .spinner {
+    width: 15px; height: 15px; border: 2px solid var(--accent-soft); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .7s linear infinite; display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- Formats section ---------- */
+  .sec-head { text-align: center; margin: 64px 0 26px; }
+  .sec-head h2 { font-size: clamp(1.5rem, 3.5vw, 2.1rem); font-weight: 800; letter-spacing: -.025em; }
+  .sec-head p { color: var(--muted); margin-top: 8px; }
+  .fmt-chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 720px; margin: 0 auto; }
+  .chip {
+    font-size: .82rem; font-weight: 700; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border); padding: 10px 16px; border-radius: 12px;
+    transition: .16s;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
+  .chip small { color: var(--muted); font-weight: 600; }
+
+  /* ---------- Features ---------- */
+  .features { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  .feat {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 22px;
+    box-shadow: var(--shadow); transition: .2s;
+  }
+  .feat:hover { border-color: var(--border-strong); transform: translateY(-3px); }
+  .feat .fi {
+    width: 44px; height: 44px; border-radius: 12px; background: var(--accent-soft); color: var(--accent);
+    display: flex; align-items: center; justify-content: center; font-size: 21px; margin-bottom: 14px;
+  }
+  .feat h4 { font-size: 1rem; font-weight: 800; }
+  .feat p { font-size: .86rem; color: var(--muted); margin-top: 6px; }
+
+  /* ---------- FAQ ---------- */
+  .faq { max-width: 720px; margin: 0 auto; display: grid; gap: 12px; }
+  .faq details {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 4px 18px;
+  }
+  .faq summary {
+    cursor: pointer; padding: 15px 0; font-weight: 700; font-size: .95rem; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; color: var(--accent); font-size: 1.3rem; font-weight: 400; }
+  .faq details[open] summary::after { content: "−"; }
+  .faq p { color: var(--muted); font-size: .88rem; padding: 0 0 16px; }
+
+  /* ---------- How it works ---------- */
+  .steps { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .step { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 26px 22px; box-shadow: var(--shadow); transition: .2s; }
+  .step:hover { border-color: var(--border-strong); transform: translateY(-3px); }
+  .step .num {
+    width: 42px; height: 42px; border-radius: 12px; background: var(--accent-grad); color: #fff;
+    font-weight: 800; font-size: 1.05rem; display: flex; align-items: center; justify-content: center;
+    margin-bottom: 15px; box-shadow: 0 8px 18px rgba(249,115,22,.4);
+  }
+  .step h4 { font-size: 1.02rem; font-weight: 800; }
+  .step p { color: var(--muted); font-size: .88rem; margin-top: 6px; }
+
+  /* ---------- Formats table ---------- */
+  .fmt-table-wrap {
+    max-width: 880px; margin: 0 auto; overflow-x: auto;
+    border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); background: var(--surface);
+  }
+  .fmt-table { width: 100%; border-collapse: collapse; font-size: .86rem; min-width: 640px; }
+  .fmt-table th, .fmt-table td { padding: 13px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+  .fmt-table thead th { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); background: var(--surface-2); }
+  .fmt-table tbody tr:last-child td { border-bottom: none; }
+  .fmt-table tbody tr:hover { background: var(--surface-2); }
+  .fmt-table td:first-child { font-weight: 800; }
+  .fmt-table .y { color: var(--success); font-weight: 800; }
+  .fmt-table .n { color: var(--muted); opacity: .55; }
+
+  /* ---------- Use cases ---------- */
+  .usecases { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+  .uc { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 24px; box-shadow: var(--shadow); transition: .2s; }
+  .uc:hover { border-color: var(--border-strong); transform: translateY(-3px); }
+  .uc .uc-ico {
+    width: 46px; height: 46px; border-radius: 13px; background: var(--accent-soft); color: var(--accent);
+    display: flex; align-items: center; justify-content: center; font-size: 23px; margin-bottom: 13px;
+  }
+  .uc h4 { font-size: 1.05rem; font-weight: 800; }
+  .uc ul { list-style: none; margin-top: 13px; display: grid; gap: 10px; }
+  .uc li { font-size: .87rem; color: var(--muted); padding-left: 24px; position: relative; }
+  .uc li::before { content: "✓"; position: absolute; left: 0; color: var(--accent); font-weight: 800; }
+
+  /* ---------- More tools ---------- */
+  .tools { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .tool { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 14px; transition: .2s; }
+  .tool:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+  .tool .t-ico {
+    width: 46px; height: 46px; border-radius: 13px; background: var(--accent-soft); color: var(--accent);
+    display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+  }
+  .tool h4 { font-size: .95rem; font-weight: 800; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .tool p { font-size: .8rem; color: var(--muted); margin-top: 3px; }
+  .soon { font-size: .58rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); background: var(--accent-soft); padding: 3px 7px; border-radius: 999px; }
+
+  footer {
+    margin-top: 72px; padding-top: 28px; border-top: 1px solid var(--border);
+    text-align: center; color: var(--muted); font-size: .82rem;
+  }
+  .foot-links { display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: center; margin-bottom: 20px; }
+  .foot-links a { font-size: .85rem; font-weight: 600; color: var(--muted); transition: .15s; }
+  .foot-links a:hover { color: var(--accent); }
+  footer .fbrand { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+  footer .fbrand .logo { width: 26px; height: 26px; border-radius: 7px; font-size: 14px; }
+  footer .dot { margin: 0 7px; opacity: .5; }
+
+  /* ---------- Embed mode (?embed=1) ---------- */
+  .embed-head { display: none; align-items: center; gap: 14px; text-align: left; }
+  .embed-head .eh-icon {
+    width: 46px; height: 46px; border-radius: 12px; background: var(--accent-grad); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+    box-shadow: 0 6px 16px rgba(249,115,22,.4);
+  }
+  .embed-head .eh-title { font-size: 1.25rem; font-weight: 800; letter-spacing: -.02em; }
+  .embed-head .eh-desc { font-size: .84rem; color: var(--muted); margin-top: 2px; }
+  body.embed .nav,
+  body.embed .hero .eyebrow,
+  body.embed .hero h1,
+  body.embed .hero .lead,
+  body.embed .trust,
+  body.embed #how,
+  body.embed #formats,
+  body.embed #features,
+  body.embed #usecases,
+  body.embed #tools,
+  body.embed #faq,
+  body.embed footer { display: none !important; }
+  body.embed .hero { padding: 18px 0 0; text-align: left; }
+  body.embed .embed-head { display: flex; }
+  body.embed .dropzone { margin: 16px 0 0; max-width: none; }
+  body.embed .panel, body.embed .toolbar, body.embed .progress-wrap, body.embed #grid { max-width: none; }
+  body.embed .wrap { padding-bottom: 24px; }
+  .embed-note { display: none; }
+  body.embed .embed-note { display: block; text-align: center; font-size: .76rem; color: var(--muted); margin-top: 18px; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--text); color: var(--bg); padding: 13px 22px; border-radius: 13px;
+    font-size: .86rem; font-weight: 700; box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none;
+    transition: .3s; z-index: 60;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="/">
+      <span class="logo">⇄</span>
+      <span class="word">Trans<span class="grad">cone</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="/convert.html" class="active">Converter</a>
+      <a href="/compress.html">Optimize</a>
+      <a href="/crop.html">Crop</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <div class="nav-right">
+      <button class="theme-btn" id="themeBtn" title="Toggle theme">🌙</button>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap" id="top">
+  <section class="hero" id="convert">
+    <div class="embed-head">
+      <div class="eh-icon">⇄</div>
+      <div class="eh-text">
+        <div class="eh-title">Image Converter</div>
+        <div class="eh-desc">JPG, PNG, WebP, AVIF, PDF, HEIC, GIF, TIFF &amp; more — converted right in your browser.</div>
+      </div>
+    </div>
+    <span class="eyebrow">🔒 100% Private · Runs in your browser</span>
+    <h1>Convert any image,<br><span class="grad">instantly &amp; privately</span></h1>
+    <p class="lead">JPG, PNG, WebP, AVIF, PDF, HEIC, BMP, GIF, TIFF, SVG &amp; ICO — converted right on your device. Nothing is ever uploaded.</p>
+
+    <div class="dropzone" id="dropzone">
+      <div class="di">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 16V4m0 0l-4 4m4-4l4 4"/>
+          <path d="M20 16.5A3.5 3.5 0 0018.5 10h-1.26A6 6 0 104 15.25"/>
+        </svg>
+      </div>
+      <h3>Drop your images here</h3>
+      <p>or <span class="browse">browse files</span> — add as many as you like</p>
+      <div class="dz-sub">JPG · PNG · WebP · AVIF · GIF · BMP · SVG · HEIC · TIFF · PDF</div>
+      <input type="file" id="fileInput" accept="image/*,.heic,.heif,.tif,.tiff,.pdf,.svg,.avif,.bmp" multiple hidden />
+    </div>
+
+    <div class="trust">
+      <span class="tbadge green">🛡 100% Private</span>
+      <span class="tbadge blue">🌐 11 Formats</span>
+      <span class="tbadge violet">⚡ Instant · No upload</span>
+    </div>
+    <div class="embed-note">🔒 Your files never leave this device — everything runs locally in your browser.</div>
+  </section>
+
+  <!-- Settings -->
+  <div class="panel hidden" id="panel">
+    <div class="panel-head"><span class="dotmark"></span> Conversion settings</div>
+    <div class="panel-body">
+      <div class="field">
+        <label for="formatSel">Convert to</label>
+        <select id="formatSel">
+          <optgroup label="Web (recommended)">
+            <option value="webp">WebP — smallest, great quality</option>
+            <option value="avif">AVIF — next-gen, tiny files</option>
+            <option value="jpeg" selected>JPG / JPEG — universal photos</option>
+            <option value="png">PNG — lossless, transparency</option>
+          </optgroup>
+          <optgroup label="Documents & icons">
+            <option value="pdf">PDF — document</option>
+            <option value="ico">ICO — favicon / app icon</option>
+          </optgroup>
+          <optgroup label="Other formats">
+            <option value="gif">GIF</option>
+            <option value="bmp">BMP — bitmap</option>
+            <option value="tiff">TIFF — print / archival</option>
+            <option value="svg">SVG — image embedded in vector</option>
+          </optgroup>
+        </select>
+        <div class="hint" id="formatHint">Universal format, supported everywhere. Best for photographs.</div>
+      </div>
+
+      <div class="field" id="qualityField">
+        <label for="quality">Quality</label>
+        <div class="slider-row">
+          <input type="range" id="quality" min="1" max="100" value="90" />
+          <span class="qval" id="qval">90</span>
+        </div>
+        <div class="hint" id="qualityHint">Lower = smaller file. 80–92 is the sweet spot.</div>
+      </div>
+
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>Resize <span style="font-weight:500;color:var(--muted)">(optional)</span></label>
+        <div class="resize-grid">
+          <div><input type="number" id="rWidth" placeholder="Width" min="1" /></div>
+          <div><input type="number" id="rHeight" placeholder="Height" min="1" /></div>
+          <div class="unit-toggle" id="unitToggle">
+            <button data-unit="px" class="active">px</button>
+            <button data-unit="pct">%</button>
+          </div>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="keepAspect" checked />
+          Keep aspect ratio
+        </label>
+        <div class="hint">Leave blank to keep original dimensions.</div>
+      </div>
+
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>Rotate</label>
+        <div class="seg" id="rotateSeg">
+          <button data-rot="0" class="active">None</button>
+          <button data-rot="90">90°</button>
+          <button data-rot="180">180°</button>
+          <button data-rot="270">270°</button>
+        </div>
+      </div>
+
+      <div class="field" id="bgField" style="grid-column: 1 / -1;">
+        <label>Background <span style="font-weight:500;color:var(--muted)">— fills transparent areas when saving to JPG / BMP / PDF</span></label>
+        <div class="seg" id="bgSeg">
+          <button data-bg="#ffffff" class="active">White</button>
+          <button data-bg="#000000">Black</button>
+          <button data-bg="custom">Custom</button>
+          <input type="color" id="bgColor" value="#ffffff" title="Custom background colour" />
+        </div>
+      </div>
+
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>Colour filter</label>
+        <div class="seg" id="filterSeg">
+          <button data-fx="none" class="active">None</button>
+          <button data-fx="grayscale">Grayscale</button>
+          <button data-fx="sepia">Sepia</button>
+          <button data-fx="invert">Invert</button>
+          <button data-fx="bw">B&amp;W</button>
+        </div>
+      </div>
+
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>Flip</label>
+        <div class="seg" id="flipSeg">
+          <button data-flip="h">↔ Horizontal</button>
+          <button data-flip="v">↕ Vertical</button>
+        </div>
+      </div>
+
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>Adjustments</label>
+        <div class="adjust">
+          <div class="adj-row"><span class="adj-label">Brightness</span><input type="range" id="brightness" min="-100" max="100" value="0" /><span class="qval" id="brightnessVal">0</span></div>
+          <div class="adj-row"><span class="adj-label">Contrast</span><input type="range" id="contrast" min="-100" max="100" value="0" /><span class="qval" id="contrastVal">0</span></div>
+          <div class="adj-row"><span class="adj-label">Saturation</span><input type="range" id="saturation" min="0" max="200" value="100" /><span class="qval" id="saturationVal">100</span></div>
+        </div>
+      </div>
+
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>Crop <span style="font-weight:500;color:var(--muted)">— pixels to trim from each edge</span></label>
+        <div class="crop-grid">
+          <div class="cg"><span>Top</span><input type="number" id="cropTop" min="0" placeholder="0" /></div>
+          <div class="cg"><span>Bottom</span><input type="number" id="cropBottom" min="0" placeholder="0" /></div>
+          <div class="cg"><span>Left</span><input type="number" id="cropLeft" min="0" placeholder="0" /></div>
+          <div class="cg"><span>Right</span><input type="number" id="cropRight" min="0" placeholder="0" /></div>
+        </div>
+      </div>
+
+      <div class="field" id="dpiField" style="grid-column: 1 / -1;">
+        <label>DPI <span style="font-weight:500;color:var(--muted)">— print resolution (JPG / PNG)</span></label>
+        <input type="number" id="dpi" min="1" value="72" style="max-width:160px;" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar hidden" id="toolbar">
+    <span class="status" id="status">0 files</span>
+    <div class="actions">
+      <button class="btn btn-ghost" id="clearBtn">Clear all</button>
+      <button class="btn btn-ghost" id="addMoreBtn">＋ Add more</button>
+      <button class="btn btn-primary" id="convertBtn">Convert all</button>
+      <button class="btn btn-success hidden" id="zipBtn">⬇ Download all (.zip)</button>
+    </div>
+  </div>
+
+  <div class="progress-wrap hidden" id="progressWrap">
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <span class="progress-label" id="progressLabel">Converting…</span>
+  </div>
+
+  <div id="grid" class="hidden"></div>
+
+  <!-- How it works -->
+  <section id="how">
+    <div class="sec-head">
+      <h2>Convert in three easy steps</h2>
+      <p>Fast, simple, and nothing to learn.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <h4>Drop your images</h4>
+        <p>Drag &amp; drop, or browse — add a single photo or a whole batch in any supported format.</p>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <h4>Pick a format &amp; tweak</h4>
+        <p>Choose the output format, then fine-tune quality and size if you want. Sensible defaults are ready to go.</p>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <h4>Download instantly</h4>
+        <p>Your files convert on the spot — grab them one by one or download everything as a zip.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Formats -->
+  <section id="formats">
+    <div class="sec-head">
+      <h2>Every format, explained</h2>
+      <p>Convert between all of these — fully in your browser, nothing uploaded.</p>
+    </div>
+    <div class="fmt-table-wrap">
+      <table class="fmt-table">
+        <thead>
+          <tr><th>Format</th><th>Compression</th><th>Transparency</th><th>Animation</th><th>Best for</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>JPG / JPEG</td><td>Lossy</td><td class="n">No</td><td class="n">No</td><td>Photographs &amp; everyday sharing</td></tr>
+          <tr><td>PNG</td><td>Lossless</td><td class="y">Yes</td><td class="n">No</td><td>Logos, screenshots, graphics</td></tr>
+          <tr><td>WebP</td><td>Both</td><td class="y">Yes</td><td class="y">Yes</td><td>Fast, lightweight web images</td></tr>
+          <tr><td>AVIF</td><td>Both</td><td class="y">Yes</td><td class="y">Yes</td><td>Smallest next-gen web images</td></tr>
+          <tr><td>GIF</td><td>Lossless</td><td class="y">Yes</td><td class="y">Yes</td><td>Simple animations &amp; graphics</td></tr>
+          <tr><td>HEIC / HEIF</td><td>Lossy</td><td class="y">Yes</td><td class="n">No</td><td>iPhone photos → shareable formats</td></tr>
+          <tr><td>TIFF</td><td>Lossless</td><td class="y">Yes</td><td class="n">No</td><td>Print &amp; archival workflows</td></tr>
+          <tr><td>BMP</td><td>None</td><td class="n">No</td><td class="n">No</td><td>Maximum compatibility</td></tr>
+          <tr><td>SVG</td><td>—</td><td class="y">Yes</td><td class="n">No</td><td>Wrapping a raster in a vector file</td></tr>
+          <tr><td>PDF</td><td>—</td><td class="n">No</td><td class="n">No</td><td>Documents &amp; printing</td></tr>
+          <tr><td>ICO</td><td>Lossless</td><td class="y">Yes</td><td class="n">No</td><td>Favicons &amp; app icons</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features">
+    <div class="sec-head">
+      <h2>Why Transcone</h2>
+      <p>Faster, more private, and more capable than the alternatives.</p>
+    </div>
+    <div class="features">
+      <div class="feat"><div class="fi">🔒</div><h4>Truly private</h4><p>Images are processed on your device and never touch a server. What you convert stays yours.</p></div>
+      <div class="feat"><div class="fi">🌐</div><h4>Works everywhere</h4><p>Runs in any modern browser on Windows, Mac, Linux, iOS and Android — nothing to install.</p></div>
+      <div class="feat"><div class="fi">🎛️</div><h4>Full control</h4><p>Choose the output format, fine-tune quality, and resize by pixels or percentage.</p></div>
+      <div class="feat"><div class="fi">📦</div><h4>Batch &amp; ZIP</h4><p>Drop a whole folder, convert it all, and download everything in a single zip.</p></div>
+      <div class="feat"><div class="fi">⚡</div><h4>Instant</h4><p>No upload wait and no round-trip. Conversion starts the moment you drop a file.</p></div>
+    </div>
+  </section>
+
+  <!-- Use cases -->
+  <section id="usecases">
+    <div class="sec-head">
+      <h2>Made for the way you work</h2>
+      <p>Whatever you're converting for, Transcone fits right in.</p>
+    </div>
+    <div class="usecases">
+      <div class="uc">
+        <div class="uc-ico">🎨</div>
+        <h4>Creators</h4>
+        <ul>
+          <li>Resize &amp; reformat for every platform</li>
+          <li>Shrink images for faster-loading pages</li>
+          <li>Prep graphics for social posts</li>
+          <li>Turn iPhone HEIC into shareable JPG</li>
+        </ul>
+      </div>
+      <div class="uc">
+        <div class="uc-ico">💼</div>
+        <h4>Professionals</h4>
+        <ul>
+          <li>Streamline your design handoffs</li>
+          <li>Batch-export assets for clients</li>
+          <li>Convert legacy TIFF &amp; BMP archives</li>
+          <li>Keep sensitive files off the cloud</li>
+        </ul>
+      </div>
+      <div class="uc">
+        <div class="uc-ico">🏠</div>
+        <h4>Everyone else</h4>
+        <ul>
+          <li>Organize and tidy photo collections</li>
+          <li>Get images print-ready</li>
+          <li>Make a favicon or app icon</li>
+          <li>Reduce file size before sending</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- More tools -->
+  <section id="tools">
+    <div class="sec-head">
+      <h2>More tools on the way</h2>
+      <p>The same private, in-browser approach — expanding into a full toolkit.</p>
+    </div>
+    <div class="tools">
+      <div class="tool">
+        <div class="t-ico">🗜️</div>
+        <div><h4>Image Compressor <span class="soon">Soon</span></h4><p>Shrink file size while keeping images sharp.</p></div>
+      </div>
+      <div class="tool">
+        <div class="t-ico">📐</div>
+        <div><h4>Image Resizer <span class="soon">Soon</span></h4><p>Resize by pixels, percentage or preset.</p></div>
+      </div>
+      <div class="tool">
+        <div class="t-ico">✂️</div>
+        <div><h4>Background Remover <span class="soon">Soon</span></h4><p>Cut out subjects with one click.</p></div>
+      </div>
+      <div class="tool">
+        <div class="t-ico">🔳</div>
+        <div><h4>QR Code Generator <span class="soon">Soon</span></h4><p>Turn any link into a scannable code.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="sec-head">
+      <h2>Questions &amp; answers</h2>
+      <p>Everything you might wonder about converting with Transcone.</p>
+    </div>
+    <div class="faq">
+      <details><summary>Are my images uploaded anywhere?</summary><p>No. Transcone converts everything locally in your browser using your device's own processing power. Your files never leave your computer, so nothing can be stored, shared, or leaked.</p></details>
+      <details><summary>Does it work on large or high-resolution images?</summary><p>Because everything runs on your device, performance depends on your device's memory rather than a server. Small icons and large high-resolution photos are both handled locally.</p></details>
+      <details><summary>Which formats can I convert?</summary><p>Input: JPG, PNG, WebP, AVIF, GIF, BMP, SVG, HEIC/HEIF, TIFF and PDF. Output: JPG, PNG, WebP, AVIF, GIF, BMP, TIFF, SVG, PDF and ICO.</p></details>
+      <details><summary>Does it work offline?</summary><p>Once the page has loaded, standard formats convert fully offline. A few formats (HEIC, TIFF, PDF) use small helper libraries that load once from the web.</p></details>
+      <details><summary>Will my images lose quality?</summary><p>For lossless formats (PNG, TIFF, BMP) quality is preserved exactly. For lossy formats (JPG, WebP, AVIF) you control the quality slider — keep it high for near-original results, or lower it for smaller files.</p></details>
+      <details><summary>Can I use it for commercial work?</summary><p>Yes — Transcone works for both personal and commercial projects: convert client assets, product images, or anything else.</p></details>
+    </div>
+  </section>
+
+  <footer>
+    <div class="fbrand"><span class="logo">⇄</span> Transcone</div>
+    <div class="foot-links">
+      <a href="#convert">Converter</a>
+      <a href="#how">How it works</a>
+      <a href="#formats">Formats</a>
+      <a href="#features">Features</a>
+      <a href="#usecases">Use cases</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <div>Everything runs locally in your browser <span class="dot">·</span> No data collected</div>
+    <div style="margin-top:10px;">© 2026 Transcone <span class="dot">·</span> a <span style="font-weight:700;color:var(--text)">Transparency&nbsp;Strategies</span> project</div>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   Transcone — client-side image converter
+   ============================================================ */
+
+const $ = (id) => document.getElementById(id);
+const dropzone = $('dropzone');
+const fileInput = $('fileInput');
+const panel = $('panel');
+const toolbar = $('toolbar');
+const grid = $('grid');
+const statusEl = $('status');
+const formatSel = $('formatSel');
+const formatHint = $('formatHint');
+const qualityField = $('qualityField');
+const qualityInput = $('quality');
+const qval = $('qval');
+const qualityHint = $('qualityHint');
+const rWidth = $('rWidth');
+const rHeight = $('rHeight');
+const keepAspect = $('keepAspect');
+const unitToggle = $('unitToggle');
+const convertBtn = $('convertBtn');
+const zipBtn = $('zipBtn');
+const clearBtn = $('clearBtn');
+const addMoreBtn = $('addMoreBtn');
+const progressWrap = $('progressWrap');
+const progressFill = $('progressFill');
+const progressLabel = $('progressLabel');
+const rotateSeg = $('rotateSeg');
+const bgSeg = $('bgSeg');
+const bgColor = $('bgColor');
+const bgField = $('bgField');
+const dpiField = $('dpiField');
+let converting = false;
+
+let items = [];
+let idSeq = 0;
+let unit = 'px';
+
+/* ---------- Format metadata ---------- */
+const LOSSLESS = new Set(['png', 'bmp', 'tiff', 'svg', 'ico', 'gif']);
+const OPAQUE_OUT = new Set(['jpeg', 'bmp', 'pdf']); // formats that can't hold transparency
+const MIME = { jpeg:'image/jpeg', png:'image/png', webp:'image/webp', avif:'image/avif' };
+const EXT = { jpeg:'jpg', png:'png', webp:'webp', avif:'avif', pdf:'pdf', ico:'ico', gif:'gif', bmp:'bmp', tiff:'tiff', svg:'svg' };
+const HINTS = {
+  webp:  'Modern format — up to 30% smaller than JPG at the same quality. Great for the web.',
+  avif:  'Newest format — the smallest files with excellent quality. Best in modern browsers.',
+  jpeg:  'Universal format, supported everywhere. Best for photographs. No transparency.',
+  png:   'Lossless with transparency. Best for logos, screenshots, and graphics.',
+  pdf:   'Wraps each image into a PDF page — handy for sharing or printing.',
+  ico:   'Windows/browser icon. Generates multiple sizes (16–256px) in one file.',
+  gif:   '256-color format. Good for simple graphics; larger for photos.',
+  bmp:   'Uncompressed bitmap. Large files, maximum compatibility.',
+  tiff:  'High-quality, lossless — used in print and archival workflows.',
+  svg:   'Embeds your image inside an SVG wrapper (raster stays raster).'
+};
+
+/* ---------- Lazy library loading (fetch only when the format needs it) ---------- */
+const CDN = {
+  heic:  'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js',
+  utif:  'https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js',
+  jspdf: 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
+  jszip: 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+  pdfjs: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
+  pdfworker: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
+  gifenc:'https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.esm.js'
+};
+const _scriptCache = {};
+function loadScript(src) {
+  if (_scriptCache[src]) return _scriptCache[src];
+  _scriptCache[src] = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = () => { delete _scriptCache[src]; reject(new Error('Could not load a required library — check your connection')); };
+    document.head.appendChild(s);
+  });
+  return _scriptCache[src];
+}
+async function ensureHeic()  { if (!window.heic2any) await loadScript(CDN.heic);  return window.heic2any; }
+async function ensureUTIF()  { if (!window.UTIF)     await loadScript(CDN.utif);  return window.UTIF; }
+async function ensureJsPDF() { if (!window.jspdf)    await loadScript(CDN.jspdf); return window.jspdf; }
+async function ensureJSZip() { if (!window.JSZip)    await loadScript(CDN.jszip); return window.JSZip; }
+async function ensurePdfjs() { if (!window.pdfjsLib) await loadScript(CDN.pdfjs); return window.pdfjsLib; }
+let _pdfWorkerReady = false;
+async function ensurePdfWorker() {
+  if (_pdfWorkerReady) return;
+  const opts = window.pdfjsLib.GlobalWorkerOptions;
+  try {
+    // Load the worker as a same-origin blob — avoids cross-origin worker hangs.
+    const resp = await fetch(CDN.pdfworker);
+    if (!resp.ok) throw new Error('worker http ' + resp.status);
+    opts.workerSrc = URL.createObjectURL(await resp.blob());
+  } catch (e) {
+    // Fallback: point pdf.js straight at the CDN worker URL.
+    opts.workerSrc = CDN.pdfworker;
+  }
+  _pdfWorkerReady = true;
+}
+let _gifencPromise;
+async function ensureGifenc() {
+  if (!window.gifenc) {
+    _gifencPromise = _gifencPromise || import(CDN.gifenc).then(m => (window.gifenc = m));
+    await _gifencPromise;
+  }
+  return window.gifenc;
+}
+
+/* ---------- Theme ---------- */
+const themeBtn = $('themeBtn');
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  themeBtn.textContent = t === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem('tc-theme', t); } catch (e) {}
+}
+// Embed mode: ?embed=1 hides the marketing page and shows just the tool.
+// Optional ?theme=light|dark overrides the theme (without persisting).
+const _params = new URLSearchParams(location.search);
+if (_params.has('embed')) document.body.classList.add('embed');
+const _themeParam = _params.get('theme');
+if (_themeParam === 'light' || _themeParam === 'dark') {
+  document.documentElement.setAttribute('data-theme', _themeParam);
+  themeBtn.textContent = _themeParam === 'dark' ? '☀️' : '🌙';
+} else {
+  applyTheme((() => { try { return localStorage.getItem('tc-theme') || 'dark'; } catch(e){ return 'dark'; } })());
+}
+themeBtn.onclick = () => applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+
+/* ---------- Toast ---------- */
+let toastTimer;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ---------- Helpers ---------- */
+function humanSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  return (b / 1048576).toFixed(2) + ' MB';
+}
+function baseName(name) { return name.replace(/\.[^.]+$/, ''); }
+function extOf(name) { return (name.split('.').pop() || '').toLowerCase(); }
+
+function updateFormatUI() {
+  const f = formatSel.value;
+  formatHint.textContent = HINTS[f] || '';
+  qualityField.style.display = LOSSLESS.has(f) || f === 'pdf' ? 'none' : 'block';
+  bgField.style.display = OPAQUE_OUT.has(f) ? 'block' : 'none';
+  dpiField.style.display = (f === 'jpeg' || f === 'png') ? 'block' : 'none';
+}
+formatSel.onchange = updateFormatUI;
+updateFormatUI();
+
+qualityInput.oninput = () => { qval.textContent = qualityInput.value; };
+
+unitToggle.querySelectorAll('button').forEach(b => {
+  b.onclick = () => {
+    unitToggle.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    unit = b.dataset.unit;
+    rWidth.placeholder = unit === 'px' ? 'Width' : 'Width %';
+    rHeight.placeholder = unit === 'px' ? 'Height' : 'Height %';
+  };
+});
+
+/* ---------- Rotate & background ---------- */
+let rotation = 0;
+let bgMode = '#ffffff'; // '#ffffff' | '#000000' | 'custom'
+rotateSeg.querySelectorAll('button').forEach(b => b.onclick = () => {
+  rotateSeg.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  rotation = parseInt(b.dataset.rot, 10);
+});
+bgSeg.querySelectorAll('button').forEach(b => b.onclick = () => {
+  bgSeg.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  bgMode = b.dataset.bg;
+});
+bgColor.oninput = () => {
+  bgMode = 'custom';
+  bgSeg.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+  bgSeg.querySelector('[data-bg="custom"]').classList.add('active');
+};
+function currentBg() { return bgMode === 'custom' ? bgColor.value : bgMode; }
+
+/* ---------- Colour filter & flip ---------- */
+let filterMode = 'none'; // none | grayscale | sepia | invert | bw
+let flipH = false, flipV = false;
+const filterSeg = $('filterSeg');
+const flipSeg = $('flipSeg');
+filterSeg.querySelectorAll('button').forEach(b => b.onclick = () => {
+  filterSeg.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  filterMode = b.dataset.fx;
+});
+flipSeg.querySelectorAll('button').forEach(b => b.onclick = () => {
+  b.classList.toggle('active');
+  const on = b.classList.contains('active');
+  if (b.dataset.flip === 'h') flipH = on; else flipV = on;
+});
+/* ---------- Adjustments, crop, DPI ---------- */
+let brightness = 0, contrast = 0, saturation = 100;
+[['brightness','brightnessVal'],['contrast','contrastVal'],['saturation','saturationVal']].forEach(([id, valId]) => {
+  const el = $(id), v = $(valId);
+  el.oninput = () => {
+    v.textContent = el.value;
+    if (id === 'brightness') brightness = +el.value;
+    else if (id === 'contrast') contrast = +el.value;
+    else saturation = +el.value;
+  };
+});
+const dpiInput = $('dpi');
+function currentDpi() { const n = parseInt(dpiInput.value, 10); return isNaN(n) || n <= 0 ? null : n; }
+function cropVal(id) { const n = parseInt($(id).value, 10); return isNaN(n) || n < 0 ? 0 : n; }
+
+// Brightness / contrast / saturation, then colour filter — one pixel pass.
+function applyFilter(ctx, w, h) {
+  const hasAdjust = brightness !== 0 || contrast !== 0 || saturation !== 100;
+  if (filterMode === 'none' && !hasAdjust) return;
+  const C = contrast * 2.55;
+  const cf = (259 * (C + 255)) / (255 * (259 - C));
+  const sat = saturation / 100;
+  const br = brightness * 2.55;
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    let r = d[i], g = d[i + 1], b = d[i + 2];
+    if (br) { r += br; g += br; b += br; }
+    if (contrast) { r = cf * (r - 128) + 128; g = cf * (g - 128) + 128; b = cf * (b - 128) + 128; }
+    if (saturation !== 100) { const gr = 0.299 * r + 0.587 * g + 0.114 * b; r = gr + sat * (r - gr); g = gr + sat * (g - gr); b = gr + sat * (b - gr); }
+    r = r < 0 ? 0 : r > 255 ? 255 : r; g = g < 0 ? 0 : g > 255 ? 255 : g; b = b < 0 ? 0 : b > 255 ? 255 : b;
+    if (filterMode === 'grayscale' || filterMode === 'bw') {
+      let v = 0.299 * r + 0.587 * g + 0.114 * b;
+      if (filterMode === 'bw') v = v < 128 ? 0 : 255;
+      r = g = b = v;
+    } else if (filterMode === 'sepia') {
+      const nr = 0.393 * r + 0.769 * g + 0.189 * b, ng = 0.349 * r + 0.686 * g + 0.168 * b, nb = 0.272 * r + 0.534 * g + 0.131 * b;
+      r = nr > 255 ? 255 : nr; g = ng > 255 ? 255 : ng; b = nb > 255 ? 255 : nb;
+    } else if (filterMode === 'invert') {
+      r = 255 - r; g = 255 - g; b = 255 - b;
+    }
+    d[i] = r; d[i + 1] = g; d[i + 2] = b;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/* ---------- DPI byte-patching (JPEG JFIF + PNG pHYs) ---------- */
+const _crcTable = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(bytes, start, end) { let c = 0xFFFFFFFF; for (let i = start; i < end; i++) c = _crcTable[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function setJpegDpi(bytes, dpi) {
+  if (bytes[2] === 0xFF && bytes[3] === 0xE0) { // APP0 JFIF
+    bytes[13] = 1;                       // units = dots per inch
+    bytes[14] = dpi >> 8; bytes[15] = dpi & 0xFF;
+    bytes[16] = dpi >> 8; bytes[17] = dpi & 0xFF;
+  }
+  return bytes;
+}
+function setPngDpi(bytes, dpi) {
+  const ppm = Math.round(dpi / 0.0254);
+  const chunk = new Uint8Array(4 + 4 + 9 + 4);
+  const dv = new DataView(chunk.buffer);
+  dv.setUint32(0, 9);
+  chunk.set([0x70, 0x48, 0x59, 0x73], 4); // 'pHYs'
+  dv.setUint32(8, ppm); dv.setUint32(12, ppm); chunk[16] = 1; // unit = metre
+  dv.setUint32(17, crc32(chunk, 4, 17));
+  const out = new Uint8Array(bytes.length + chunk.length); // insert after IHDR (offset 33)
+  out.set(bytes.subarray(0, 33), 0);
+  out.set(chunk, 33);
+  out.set(bytes.subarray(33), 33 + chunk.length);
+  return out;
+}
+async function applyDpi(blob, fmt) {
+  const dpi = currentDpi();
+  if (!dpi || (fmt !== 'jpeg' && fmt !== 'png')) return blob;
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  return new Blob([fmt === 'jpeg' ? setJpegDpi(bytes, dpi) : setPngDpi(bytes, dpi)], { type: MIME[fmt] });
+}
+
+/* ---------- Drag & drop ---------- */
+dropzone.onclick = () => fileInput.click();
+addMoreBtn.onclick = () => fileInput.click();
+fileInput.onchange = (e) => { addFiles(e.target.files); fileInput.value = ''; };
+['dragenter','dragover'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('drag'); }));
+['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove('drag'); }));
+dropzone.addEventListener('drop', e => { e.preventDefault(); addFiles(e.dataTransfer.files); });
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => e.preventDefault());
+
+/* ---------- Add files ---------- */
+function isSupported(file) {
+  const ext = extOf(file.name);
+  return file.type.startsWith('image/') ||
+    ['heic','heif','tif','tiff','pdf','svg','avif','bmp'].includes(ext);
+}
+async function addFiles(fileList) {
+  const files = Array.from(fileList).filter(isSupported);
+  if (!files.length) { toast('No supported images found'); return; }
+  panel.classList.remove('hidden');
+  toolbar.classList.remove('hidden');
+  grid.classList.remove('hidden');
+  for (const file of files) {
+    const item = { id: ++idSeq, file, name: file.name, origSize: file.size, status: 'pending', srcFrames: null, dims: '', results: [] };
+    items.push(item);
+    renderCard(item);
+    loadThumb(item);
+  }
+  refreshStatus();
+}
+
+function refreshStatus() {
+  const n = items.length;
+  const done = items.filter(i => i.status === 'done').length;
+  statusEl.textContent = n === 0 ? '0 files' : `${n} file${n>1?'s':''}${done? ' · '+done+' converted':''}`;
+  convertBtn.disabled = n === 0;
+  zipBtn.classList.toggle('hidden', items.flatMap(i=>i.results).length < 2);
+  updateConvertLabel();
+}
+function updateConvertLabel() {
+  if (converting) return; // don't clobber the "Converting…" spinner label
+  convertBtn.textContent = items.length === 1 ? 'Convert' : 'Convert all';
+}
+
+/* ---------- Decoders → array of canvases (frames) ---------- */
+async function decode(file) {
+  const ext = extOf(file.name);
+  const type = file.type;
+
+  if (ext === 'heic' || ext === 'heif' || type === 'image/heic' || type === 'image/heif') {
+    await ensureHeic();
+    const out = await window.heic2any({ blob: file, toType: 'image/png' });
+    const blob = Array.isArray(out) ? out[0] : out;
+    return [await blobToCanvas(blob)];
+  }
+  if (ext === 'tif' || ext === 'tiff' || type === 'image/tiff') {
+    await ensureUTIF();
+    const buf = await file.arrayBuffer();
+    const ifds = UTIF.decode(buf);
+    UTIF.decodeImage(buf, ifds[0]);
+    const rgba = UTIF.toRGBA8(ifds[0]);
+    return [rgbaToCanvas(new Uint8ClampedArray(rgba), ifds[0].width, ifds[0].height)];
+  }
+  if (ext === 'pdf' || type === 'application/pdf') {
+    await ensurePdfjs();
+    await ensurePdfWorker();
+    const buf = await file.arrayBuffer();
+    const pdf = await Promise.race([
+      window.pdfjsLib.getDocument({ data: buf }).promise,
+      new Promise((_, rej) => setTimeout(() => rej(new Error('PDF took too long to open — please try again')), 45000))
+    ]);
+    const frames = [];
+    const maxPages = Math.min(pdf.numPages, 30);
+    for (let p = 1; p <= maxPages; p++) {
+      const page = await pdf.getPage(p);
+      const viewport = page.getViewport({ scale: 2 });
+      const c = document.createElement('canvas');
+      c.width = viewport.width; c.height = viewport.height;
+      await page.render({ canvasContext: c.getContext('2d'), viewport }).promise;
+      frames.push(c);
+    }
+    return frames;
+  }
+  return [await blobToCanvas(file)];
+}
+
+function blobToCanvas(blob) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      let w = img.naturalWidth || img.width;
+      let h = img.naturalHeight || img.height;
+      if (!w || !h) { w = 512; h = 512; }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(c);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read this image')); };
+    img.src = url;
+  });
+}
+function rgbaToCanvas(rgba, w, h) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  c.getContext('2d').putImageData(new ImageData(rgba, w, h), 0, 0);
+  return c;
+}
+
+/* ---------- Thumbnail ---------- */
+async function loadThumb(item) {
+  try {
+    const frames = await decode(item.file);
+    item.srcFrames = frames;
+    const c = frames[0];
+    item.dims = `${c.width}×${c.height}` + (frames.length > 1 ? ` · ${frames.length} pages` : '');
+    const thumb = document.querySelector(`#card-${item.id} .thumb`);
+    if (thumb) {
+      const t = document.createElement('canvas');
+      const s = 128 / Math.max(c.width, c.height);
+      t.width = Math.max(1, Math.round(c.width * s));
+      t.height = Math.max(1, Math.round(c.height * s));
+      t.getContext('2d').drawImage(c, 0, 0, t.width, t.height);
+      thumb.innerHTML = '';
+      const img = new Image(); img.src = t.toDataURL('image/png'); thumb.appendChild(img);
+    }
+    updateCardSub(item);
+  } catch (e) {
+    item.status = 'error'; item.error = e.message;
+    updateCard(item);
+  }
+}
+
+/* ---------- Resize logic ---------- */
+function targetSize(w, h) {
+  let tw = parseFloat(rWidth.value), th = parseFloat(rHeight.value);
+  const hasW = !isNaN(tw) && tw > 0, hasH = !isNaN(th) && th > 0;
+  if (!hasW && !hasH) return [w, h];
+  if (unit === 'pct') {
+    tw = hasW ? w * tw / 100 : null;
+    th = hasH ? h * th / 100 : null;
+  } else {
+    tw = hasW ? tw : null;
+    th = hasH ? th : null;
+  }
+  if (keepAspect.checked) {
+    if (tw && !th) th = tw * h / w;
+    else if (th && !tw) tw = th * w / h;
+    else if (tw && th) { const r = Math.min(tw / w, th / h); tw = w * r; th = h * r; }
+  } else {
+    tw = tw || w; th = th || h;
+  }
+  return [Math.max(1, Math.round(tw)), Math.max(1, Math.round(th))];
+}
+
+// Apply rotation, resize, and (for opaque outputs) a background fill.
+function prepareCanvas(src, fmt) {
+  let base = src;
+  if (rotation) {
+    const swap = rotation === 90 || rotation === 270;
+    const rc = document.createElement('canvas');
+    rc.width = swap ? src.height : src.width;
+    rc.height = swap ? src.width : src.height;
+    const rctx = rc.getContext('2d');
+    rctx.translate(rc.width / 2, rc.height / 2);
+    rctx.rotate(rotation * Math.PI / 180);
+    rctx.drawImage(src, -src.width / 2, -src.height / 2);
+    base = rc;
+  }
+  // crop pixels from each edge
+  const ct = cropVal('cropTop'), cb = cropVal('cropBottom'), cl = cropVal('cropLeft'), cr = cropVal('cropRight');
+  if (ct || cb || cl || cr) {
+    const cw = Math.max(1, base.width - cl - cr);
+    const chh = Math.max(1, base.height - ct - cb);
+    const cc = document.createElement('canvas');
+    cc.width = cw; cc.height = chh;
+    cc.getContext('2d').drawImage(base, cl, ct, cw, chh, 0, 0, cw, chh);
+    base = cc;
+  }
+  const [tw, th] = targetSize(base.width, base.height);
+  const needResize = tw !== base.width || th !== base.height;
+  const needBg = OPAQUE_OUT.has(fmt);
+  const needFx = flipH || flipV || filterMode !== 'none' || brightness !== 0 || contrast !== 0 || saturation !== 100;
+  if (!needResize && !needBg && !needFx) return base;
+
+  const c = document.createElement('canvas');
+  c.width = tw; c.height = th;
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  // draw the (possibly flipped) image
+  ctx.save();
+  ctx.translate(flipH ? tw : 0, flipV ? th : 0);
+  ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+  ctx.drawImage(base, 0, 0, tw, th);
+  ctx.restore();
+  // colour filter applies to the image only
+  applyFilter(ctx, tw, th);
+  // for opaque outputs, paint the background *behind* the image
+  if (needBg) {
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.fillStyle = currentBg();
+    ctx.fillRect(0, 0, tw, th);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  return c;
+}
+
+/* ---------- Encoders ---------- */
+function canvasToBlob(canvas, mime, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(b => b ? resolve(b) : reject(new Error('Encoding failed')), mime, quality);
+  });
+}
+
+function encodeBMP(canvas) {
+  const { width: w, height: h } = canvas;
+  const data = canvas.getContext('2d').getImageData(0, 0, w, h).data;
+  const rowSize = Math.floor((24 * w + 31) / 32) * 4;
+  const pixelArraySize = rowSize * h;
+  const fileSize = 54 + pixelArraySize;
+  const buf = new ArrayBuffer(fileSize);
+  const dv = new DataView(buf);
+  dv.setUint16(0, 0x424D, false);
+  dv.setUint32(2, fileSize, true);
+  dv.setUint32(10, 54, true);
+  dv.setUint32(14, 40, true);
+  dv.setInt32(18, w, true);
+  dv.setInt32(22, h, true);
+  dv.setUint16(26, 1, true);
+  dv.setUint16(28, 24, true);
+  dv.setUint32(34, pixelArraySize, true);
+  let off = 54;
+  for (let y = h - 1; y >= 0; y--) {
+    let p = off + (h - 1 - y) * rowSize;
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const a = data[i+3] / 255;
+      const r = Math.round(data[i]   * a + 255 * (1 - a));
+      const g = Math.round(data[i+1] * a + 255 * (1 - a));
+      const b = Math.round(data[i+2] * a + 255 * (1 - a));
+      dv.setUint8(p++, b); dv.setUint8(p++, g); dv.setUint8(p++, r);
+    }
+  }
+  return new Blob([buf], { type: 'image/bmp' });
+}
+
+async function encodeTIFF(canvas) {
+  await ensureUTIF();
+  const { width: w, height: h } = canvas;
+  const data = canvas.getContext('2d').getImageData(0, 0, w, h).data;
+  const tiff = UTIF.encodeImage(data.buffer, w, h);
+  return new Blob([tiff], { type: 'image/tiff' });
+}
+
+async function encodePDF(frames, quality) {
+  await ensureJsPDF();
+  const { jsPDF } = window.jspdf;
+  let pdf = null;
+  for (const src of frames) {
+    const c = prepareCanvas(src, 'pdf');
+    const dataUrl = c.toDataURL('image/jpeg', quality);
+    const w = c.width, h = c.height;
+    if (!pdf) pdf = new jsPDF({ orientation: w > h ? 'l' : 'p', unit: 'px', format: [w, h] });
+    else pdf.addPage([w, h], w > h ? 'l' : 'p');
+    pdf.addImage(dataUrl, 'JPEG', 0, 0, w, h);
+  }
+  return pdf.output('blob');
+}
+
+async function encodeGIF(canvas) {
+  await ensureGifenc();
+  const { GIFEncoder, quantize, applyPalette } = window.gifenc;
+  const { width: w, height: h } = canvas;
+  const rgba = canvas.getContext('2d').getImageData(0, 0, w, h).data;
+  const palette = quantize(rgba, 256);
+  const index = applyPalette(rgba, palette);
+  const enc = GIFEncoder();
+  enc.writeFrame(index, w, h, { palette });
+  enc.finish();
+  return new Blob([enc.bytes()], { type: 'image/gif' });
+}
+
+async function encodeSVG(canvas) {
+  const png = canvas.toDataURL('image/png');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}"><image width="${canvas.width}" height="${canvas.height}" href="${png}"/></svg>`;
+  return new Blob([svg], { type: 'image/svg+xml' });
+}
+
+async function encodeICO(canvas) {
+  const sizes = [16, 32, 48, 64, 128, 256].filter(s => s <= Math.max(canvas.width, canvas.height) || s === 16);
+  const pngs = [];
+  for (const s of sizes) {
+    const c = document.createElement('canvas');
+    c.width = s; c.height = s;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    const r = Math.min(s / canvas.width, s / canvas.height);
+    const dw = canvas.width * r, dh = canvas.height * r;
+    ctx.drawImage(canvas, (s - dw) / 2, (s - dh) / 2, dw, dh);
+    const blob = await canvasToBlob(c, 'image/png');
+    pngs.push({ size: s, data: new Uint8Array(await blob.arrayBuffer()) });
+  }
+  const count = pngs.length;
+  let offset = 6 + count * 16;
+  const total = offset + pngs.reduce((a, p) => a + p.data.length, 0);
+  const buf = new ArrayBuffer(total);
+  const dv = new DataView(buf);
+  const u8 = new Uint8Array(buf);
+  dv.setUint16(0, 0, true); dv.setUint16(2, 1, true); dv.setUint16(4, count, true);
+  let dir = 6;
+  for (const p of pngs) {
+    dv.setUint8(dir, p.size >= 256 ? 0 : p.size);
+    dv.setUint8(dir+1, p.size >= 256 ? 0 : p.size);
+    dv.setUint8(dir+2, 0); dv.setUint8(dir+3, 0);
+    dv.setUint16(dir+4, 1, true); dv.setUint16(dir+6, 32, true);
+    dv.setUint32(dir+8, p.data.length, true);
+    dv.setUint32(dir+12, offset, true);
+    u8.set(p.data, offset);
+    offset += p.data.length; dir += 16;
+  }
+  return new Blob([buf], { type: 'image/x-icon' });
+}
+
+async function encodeFrame(src, fmt, quality) {
+  const canvas = prepareCanvas(src, fmt);
+  switch (fmt) {
+    case 'jpeg': case 'png': case 'webp': case 'avif': {
+      const blob = await canvasToBlob(canvas, MIME[fmt], LOSSLESS.has(fmt) ? undefined : quality);
+      if (!blob || blob.type !== MIME[fmt])
+        throw new Error(fmt.toUpperCase() + ' encoding isn’t supported by this browser');
+      return applyDpi(blob, fmt);
+    }
+    case 'bmp':  return encodeBMP(canvas);
+    case 'tiff': return encodeTIFF(canvas);
+    case 'gif':  return encodeGIF(canvas);
+    case 'svg':  return encodeSVG(canvas);
+    case 'ico':  return encodeICO(canvas);
+    default: throw new Error('Unknown format');
+  }
+}
+
+/* ---------- Convert all ---------- */
+convertBtn.onclick = async () => {
+  const fmt = formatSel.value;
+  const quality = parseInt(qualityInput.value, 10) / 100;
+  converting = true;
+  convertBtn.disabled = true;
+  convertBtn.innerHTML = '<span class="spinner"></span> Converting…';
+
+  const total = items.length;
+  let idx = 0;
+  progressWrap.classList.remove('hidden');
+  progressFill.style.width = '0%';
+
+  for (const item of items) {
+    progressLabel.textContent = total > 1 ? `Converting ${idx + 1} of ${total}…` : 'Converting…';
+    progressFill.style.width = Math.round((idx / total) * 100) + '%';
+    item.status = 'working'; item.error = null; updateCard(item);
+    try {
+      if (!item.srcFrames) item.srcFrames = await decode(item.file);
+      item.results.forEach(r => URL.revokeObjectURL(r.url));
+      item.results = [];
+
+      if (fmt === 'pdf') {
+        const blob = await encodePDF(item.srcFrames, quality);
+        pushResult(item, blob, baseName(item.name) + '.pdf');
+      } else {
+        const multi = item.srcFrames.length > 1;
+        for (let i = 0; i < item.srcFrames.length; i++) {
+          const blob = await encodeFrame(item.srcFrames[i], fmt, quality);
+          const suffix = multi ? `-${i+1}` : '';
+          pushResult(item, blob, baseName(item.name) + suffix + '.' + EXT[fmt]);
+        }
+      }
+      item.status = 'done';
+    } catch (e) {
+      item.status = 'error'; item.error = e.message || 'Conversion failed';
+    }
+    updateCard(item);
+    idx++;
+    progressFill.style.width = Math.round((idx / total) * 100) + '%';
+    await new Promise(r => setTimeout(r, 0));
+  }
+
+  const ok = items.filter(i => i.status === 'done').length;
+  progressFill.style.width = '100%';
+  progressLabel.textContent = `✓ ${ok} of ${total} done`;
+  converting = false;
+  convertBtn.disabled = false;
+  updateConvertLabel();
+  refreshStatus();
+  if (ok) toast(`✅ Converted ${ok} file${ok>1?'s':''}`);
+  setTimeout(() => { if (!converting) progressWrap.classList.add('hidden'); }, 1400);
+};
+
+function pushResult(item, blob, filename) {
+  item.results.push({ blob, url: URL.createObjectURL(blob), filename, size: blob.size });
+}
+
+/* ---------- Download all as ZIP ---------- */
+zipBtn.onclick = async () => {
+  zipBtn.disabled = true; zipBtn.textContent = 'Zipping…';
+  await ensureJSZip();
+  const zip = new JSZip();
+  const used = {};
+  items.flatMap(i => i.results).forEach(r => {
+    let name = r.filename;
+    if (used[name]) { const n = ++used[name]; name = name.replace(/(\.[^.]+)$/, `-${n}$1`); }
+    else used[r.filename] = 1;
+    zip.file(name, r.blob);
+  });
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'transcone-images.zip'; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  zipBtn.disabled = false; zipBtn.textContent = '⬇ Download all (.zip)';
+};
+
+/* ---------- Clear ---------- */
+clearBtn.onclick = () => {
+  items.forEach(i => i.results.forEach(r => URL.revokeObjectURL(r.url)));
+  items = []; grid.innerHTML = '';
+  panel.classList.add('hidden'); toolbar.classList.add('hidden'); grid.classList.add('hidden');
+  progressWrap.classList.add('hidden');
+  refreshStatus();
+};
+
+/* ---------- Rendering ---------- */
+function renderCard(item) {
+  const div = document.createElement('div');
+  div.className = 'card'; div.id = 'card-' + item.id;
+  div.innerHTML = `
+    <div class="thumb"><span class="ph">🖼️</span></div>
+    <div class="info">
+      <div class="name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
+      <div class="sub" id="sub-${item.id}">${humanSize(item.origSize)}</div>
+    </div>
+    <div class="right" id="right-${item.id}">
+      <span class="pill pending">Ready</span>
+      <button class="icon-btn" title="Remove" onclick="removeItem(${item.id})">✕</button>
+    </div>`;
+  grid.appendChild(div);
+}
+function updateCardSub(item) {
+  const sub = $('sub-' + item.id);
+  if (sub && item.status !== 'done') sub.innerHTML = `${humanSize(item.origSize)} · ${item.dims} · <span style="text-transform:uppercase">${extOf(item.name)}</span>`;
+}
+function updateCard(item) {
+  const right = $('right-' + item.id);
+  const sub = $('sub-' + item.id);
+  if (!right) return;
+  if (item.status === 'working') {
+    right.innerHTML = `<span class="pill working"><span class="spinner"></span></span>`;
+  } else if (item.status === 'error') {
+    right.innerHTML = `<span class="pill error" title="${escapeHtml(item.error||'')}">Error</span>
+      <button class="icon-btn" title="Remove" onclick="removeItem(${item.id})">✕</button>`;
+    if (sub) sub.textContent = item.error || 'Conversion failed';
+  } else if (item.status === 'done') {
+    const totalOut = item.results.reduce((a, r) => a + r.size, 0);
+    const diff = item.origSize > 0 ? Math.round((1 - totalOut / item.origSize) * 100) : 0;
+    const diffHtml = diff > 0 ? `<span class="save">↓ ${diff}% smaller</span>`
+                    : diff < 0 ? `<span class="grow">↑ ${-diff}% larger</span>` : '';
+    if (sub) sub.innerHTML = `${humanSize(item.origSize)} <span class="arrow">→</span> ${humanSize(totalOut)} &nbsp; ${diffHtml}`;
+    if (item.results.length === 1) {
+      right.innerHTML = `<a class="icon-btn dl-btn" style="width:auto;padding:0 13px;font-size:.8rem;font-weight:800;gap:5px" href="${item.results[0].url}" download="${escapeHtml(item.results[0].filename)}">⬇ Download</a>
+        <button class="icon-btn" title="Remove" onclick="removeItem(${item.id})">✕</button>`;
+    } else {
+      right.innerHTML = item.results.map((r,i) =>
+        `<a class="icon-btn dl-btn" style="width:auto;padding:0 10px;font-size:.74rem;font-weight:800" href="${r.url}" download="${escapeHtml(r.filename)}">⬇ ${i+1}</a>`
+      ).join('') + `<button class="icon-btn" title="Remove" onclick="removeItem(${item.id})">✕</button>`;
+    }
+  }
+  refreshStatus();
+}
+function removeItem(id) {
+  const item = items.find(i => i.id === id);
+  if (item) item.results.forEach(r => URL.revokeObjectURL(r.url));
+  items = items.filter(i => i.id !== id);
+  const el = $('card-' + id); if (el) el.remove();
+  if (!items.length) clearBtn.onclick();
+  refreshStatus();
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+window.removeItem = removeItem;
+</script>
+</body>
+</html>
